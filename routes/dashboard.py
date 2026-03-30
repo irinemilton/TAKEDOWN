@@ -6,6 +6,19 @@ import uuid
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
+
+def _compute_security_score(project_id):
+    vulns = Vulnerability.query.filter_by(project_id=project_id).all()
+    if not vulns:
+        return 100
+
+    severity_weights = {'High': 25, 'Medium': 15, 'Low': 8}
+    penalty = 0
+    for vuln in vulns:
+        if not vuln.is_fixed:
+            penalty += severity_weights.get(vuln.severity, 12)
+    return max(0, 100 - penalty)
+
 @dashboard_bp.route('/')
 @login_required
 def index():
@@ -67,8 +80,15 @@ def project_detail(project_id):
     
     logs = Log.query.filter_by(project_id=project.id).order_by(Log.timestamp.desc()).all()
     vulns = Vulnerability.query.filter_by(project_id=project.id).order_by(Vulnerability.discovered_at.desc()).all()
+    security_score = _compute_security_score(project.id)
     
-    return render_template('project_detail.html', project=project, logs=logs, vulns=vulns)
+    return render_template(
+        'project_detail.html',
+        project=project,
+        logs=logs,
+        vulns=vulns,
+        security_score=security_score
+    )
 
 @dashboard_bp.route('/api/project/<project_id>/logs')
 @login_required
@@ -94,9 +114,60 @@ def get_vulns(project_id):
     
     vulns = Vulnerability.query.filter_by(project_id=project.id).order_by(Vulnerability.discovered_at.desc()).all()
     return jsonify([
-        {"id": v.id, "vuln_type": v.vuln_type, "endpoint": v.endpoint, "description": v.description, "fix_suggestion": v.fix_suggestion, "is_fixed": v.is_fixed, "ai_explanation": v.ai_explanation}
+        {
+            "id": v.id,
+            "vuln_type": v.vuln_type,
+            "endpoint": v.endpoint,
+            "description": v.description,
+            "fix_suggestion": v.fix_suggestion,
+            "is_fixed": v.is_fixed,
+            "ai_explanation": v.ai_explanation,
+            "mock_before_code": v.mock_before_code,
+            "mock_after_code": v.mock_after_code,
+            "fixed_at": v.fixed_at.strftime("%Y-%m-%d %H:%M:%S") if v.fixed_at else None
+        }
         for v in vulns
     ])
+
+
+@dashboard_bp.route('/api/project/<project_id>/state')
+@login_required
+def get_project_state(project_id):
+    project = Project.query.get_or_404(project_id)
+    if current_user.role == 'client' and project.client_id != current_user.id:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    logs = Log.query.filter_by(project_id=project.id).order_by(Log.timestamp.desc()).limit(20).all()
+    vulns = Vulnerability.query.filter_by(project_id=project.id).order_by(Vulnerability.discovered_at.desc()).all()
+    fixed_count = sum(1 for v in vulns if v.is_fixed)
+
+    return jsonify({
+        "security_score": _compute_security_score(project.id),
+        "counts": {
+            "total": len(vulns),
+            "fixed": fixed_count,
+            "open": len(vulns) - fixed_count
+        },
+        "logs": [
+            {"timestamp": l.timestamp.strftime("%Y-%m-%d %H:%M:%S"), "action_type": l.action_type, "detail": l.detail}
+            for l in logs
+        ],
+        "vulns": [
+            {
+                "id": v.id,
+                "vuln_type": v.vuln_type,
+                "endpoint": v.endpoint,
+                "description": v.description,
+                "fix_suggestion": v.fix_suggestion,
+                "is_fixed": v.is_fixed,
+                "ai_explanation": v.ai_explanation,
+                "mock_before_code": v.mock_before_code,
+                "mock_after_code": v.mock_after_code,
+                "fixed_at": v.fixed_at.strftime("%Y-%m-%d %H:%M:%S") if v.fixed_at else None
+            }
+            for v in vulns
+        ]
+    })
 
 @dashboard_bp.route('/api/project/<project_id>/scan', methods=['POST'])
 @login_required
@@ -108,7 +179,7 @@ def start_scan(project_id):
     from scanner.core import run_scan
     success = run_scan(project_id)
     if success:
-        return jsonify({"status": "Scan completed."})
+        return jsonify({"status": "Scan + automatic mock remediation completed."})
     return jsonify({"error": "Scan failed or not consented"}), 400
 
 @dashboard_bp.route('/api/project/<project_id>/fix', methods=['POST'])
@@ -121,17 +192,7 @@ def trigger_fix(project_id):
     if not project.consent_granted:
         return jsonify({"error": "Client has not granted access"}), 403
         
-    import time
-    time.sleep(1) # Simulate generating a Github PR
-    
-    # Mark vulnerabilities as fixed
-    vulns = Vulnerability.query.filter_by(project_id=project.id).all()
-    for v in vulns:
-        v.is_fixed = True
-    
-    log = Log(project_id=project.id, action_type='FIX_APPLIED', detail='Admin triggered auto-fix: Automated Pull Request successfully opened on target GitHub repository.')
-    db.session.add(log)
-    db.session.commit()
-    
-    return jsonify({"status": "Fix applied via PR!"})
+    from scanner.core import apply_mock_fixes
+    fixed_count = apply_mock_fixes(project.id)
+    return jsonify({"status": f"Mock fix applied to {fixed_count} vulnerabilities."})
 

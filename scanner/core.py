@@ -2,9 +2,60 @@ import os
 import re
 import tempfile
 import subprocess
+from datetime import datetime
 from models import Project, Log, Vulnerability
 from extensions import db
 from utils.ai_engine import generate_ai_suggestions
+
+
+def _mock_fix_snippets(vuln_type):
+    snippets = {
+        'Hardcoded Secret': (
+            "API_KEY = 'prod-secret-token-123'",
+            "API_KEY = os.getenv('API_KEY')  # loaded from secure env/secret manager"
+        ),
+        'Insecure Eval': (
+            "result = eval(user_input)",
+            "allowed = {'sum': safe_sum, 'avg': safe_avg}\nresult = allowed[user_choice](numbers)"
+        ),
+        'SQL Injection Pattern': (
+            "cursor.execute(f\"SELECT * FROM users WHERE email = '{email}'\")",
+            "cursor.execute(\"SELECT * FROM users WHERE email = ?\", (email,))"
+        )
+    }
+    return snippets.get(
+        vuln_type,
+        ("# vulnerable mock code", "# fixed mock code")
+    )
+
+
+def apply_mock_fixes(project_id):
+    """Simulate an automatic fix pipeline without touching real source repos."""
+    open_vulns = Vulnerability.query.filter_by(project_id=project_id, is_fixed=False).all()
+    fixed_count = 0
+
+    for vuln in open_vulns:
+        before_code, after_code = _mock_fix_snippets(vuln.vuln_type)
+        vuln.is_fixed = True
+        vuln.mock_before_code = before_code
+        vuln.mock_after_code = after_code
+        vuln.fixed_at = datetime.utcnow()
+        fixed_count += 1
+
+        db.session.add(Log(
+            project_id=project_id,
+            action_type='FIX_APPLIED',
+            detail=f"Mock auto-fix applied for {vuln.vuln_type} at {vuln.endpoint}. Status moved to Fixed."
+        ))
+
+    db.session.add(Log(
+        project_id=project_id,
+        action_type='AUTOFIX_COMPLETED',
+        detail=f"Automatic mock remediation completed. {fixed_count} vulnerabilities marked as Fixed."
+    ))
+    db.session.commit()
+    return fixed_count
+
 
 def run_scan(project_id):
     """
@@ -109,6 +160,15 @@ def run_scan(project_id):
             log = Log(project_id=project.id, action_type='SCAN_COMPLETED', detail=f'Finished static scan across {files_scanned} files. Cloned repository has been purged.')
             db.session.add(log)
             db.session.commit()
+
+            db.session.add(Log(
+                project_id=project.id,
+                action_type='AUTOFIX_STARTED',
+                detail='Scan finished. Triggering automatic mock remediation pipeline.'
+            ))
+            db.session.commit()
+
+            apply_mock_fixes(project.id)
             
         return True
     

@@ -56,4 +56,7 @@ class Vulnerability(db.Model):
     ai_explanation = db.Column(db.Text)
     fix_suggestion = db.Column(db.Text)
     is_fixed = db.Column(db.Boolean, default=False)
+    mock_before_code = db.Column(db.Text, nullable=True)
+    mock_after_code = db.Column(db.Text, nullable=True)
+    fixed_at = db.Column(db.DateTime, nullable=True)
     discovered_at = db.Column(db.DateTime, default=datetime.utcnow)
