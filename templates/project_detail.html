@@ -5,18 +5,20 @@
     <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
         <div>
             <h1>{{ project.name }} <span style="font-size: 1rem; color: var(--color-muted); font-weight: 400; word-break: break-all;">({{ project.target_url }})</span></h1>
-            <p style="margin-top: 0.5rem; color: var(--color-muted);">Source Code Analysis (SAST)</p>
+            <p style="margin-top: 0.5rem; color: var(--color-muted);">Source Code Analysis (SAST) — Static Security Scanner</p>
         </div>
         
-        <div style="display: flex; gap: 1rem;">
+        <div style="display: flex; gap: 1rem; align-items: center;">
             {% if current_user.role == 'client' and not project.consent_granted %}
                 <form action="{{ url_for('dashboard.grant_consent', project_id=project.id) }}" method="POST">
                     <button type="submit">Grant Scanner Access</button>
                 </form>
             {% elif current_user.role == 'admin' %}
                 {% if project.consent_granted %}
-                    <button id="startScanBtn" onclick="startScan()">Start Full Scan</button>
-                    <span class="badge info" style="display: inline-flex; align-items: center;">Auto-fix runs immediately after scan</span>
+                    <button id="startScanBtn" onclick="startScan()">▶ Start Full Scan</button>
+                    {% if current_user.plan == 'premium' %}
+                        <button id="triggerFixBtn" class="secondary" onclick="triggerFix()" style="border-color: var(--color-warning); color: var(--color-warning);">🛠 Apply Auto-Fix</button>
+                    {% endif %}
                 {% else %}
                     <span class="badge critical" style="display: inline-flex; align-items: center;">Awaiting Client Consent</span>
                 {% endif %}
@@ -25,53 +27,58 @@
     </div>
 </div>
 
-<div class="card" style="margin-bottom: 1.5rem;">
-    <h2 class="section-title">Automated Security Score</h2>
-    <div style="display: flex; align-items: baseline; gap: 1rem;">
-        <span id="securityScore" style="font-size: 2.2rem; font-weight: 700; color: var(--color-primary);">{{ security_score }}</span>
-        <span style="color: var(--color-muted);">/ 100</span>
+<!-- Security Score Banner -->
+<div id="scoreBanner" class="card" style="margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; padding: 1.5rem 2rem; border-left: 6px solid var(--color-primary); transition: border-color 0.5s;">
+    <div>
+        <p style="color: var(--color-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">Security Trust Score</p>
+        <div style="display: flex; align-items: baseline; gap: 0.75rem;">
+            <span id="scoreNumber" style="font-size: 3.5rem; font-weight: 800; line-height: 1; transition: all 0.6s ease;">100</span>
+            <span style="font-size: 1.25rem; color: var(--color-muted);">/ 100</span>
+            <span id="scoreRating" style="font-size: 1.5rem; font-weight: 700; padding: 0.2rem 0.75rem; border-radius: 8px; background: #dcfce7; color: #16a34a; transition: all 0.6s ease;">A</span>
+        </div>
     </div>
-    <p id="scoreStats" style="margin-top: 0.5rem; color: var(--color-muted);">Fixed vulnerabilities are applied automatically as mock patches for demo visualization.</p>
+    <div style="text-align: right;">
+        <div id="scoreBar" style="width: 200px; height: 12px; background: #e2e8f0; border-radius: 99px; overflow: hidden;">
+            <div id="scoreBarFill" style="height: 100%; width: 100%; background: #22c55e; border-radius: 99px; transition: width 0.8s ease, background 0.8s ease;"></div>
+        </div>
+        <p id="scoreBreakdown" style="font-size: 0.75rem; color: var(--color-muted); margin-top: 0.5rem;">No vulnerabilities detected</p>
+    </div>
 </div>
 
 <div class="grid" style="grid-template-columns: 2fr 1fr;">
     <!-- Main Panel: Vulnerabilities -->
     <div class="card" style="display: flex; flex-direction: column;">
-        <h2 class="section-title">Security Posture</h2>
+        <h2 class="section-title">Vulnerability Report</h2>
         <div id="scannedVulns" class="vuln-list" style="flex: 1; margin-top: 1rem;">
-            <!-- Rendered via JS based on API, but we can do initial render too -->
             {% if not vulns %}
-                <p style="color: var(--color-muted);">No vulnerabilities detected yet. Run a scan to populate.</p>
+                <div style="text-align: center; padding: 3rem; color: var(--color-muted);">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
+                    <p>No vulnerabilities detected yet. Run a scan to populate.</p>
+                </div>
             {% else %}
                 {% for v in vulns %}
                 <div class="vuln-item {{ 'fixed' if v.is_fixed else '' }}">
                     <div class="vuln-header">
-                        <strong>{{ v.vuln_type }} at <code>{{ v.endpoint }}</code></strong>
-                        <span class="badge {{ 'safe' if v.is_fixed else 'critical' }}">{{ 'Fixed' if v.is_fixed else 'Open' }}</span>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <strong>{{ v.vuln_type }}</strong>
+                            <code style="font-size: 0.8rem; background: #f1f5f9; padding: 0.1rem 0.4rem; border-radius: 4px;">{{ v.endpoint }}</code>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <span class="badge {{ 'critical' if (v.severity or 'Medium') == 'High' else ('warning' if (v.severity or 'Medium') == 'Medium' else 'info') }}">{{ v.severity or 'Medium' }}</span>
+                            <span class="badge {{ 'safe' if v.is_fixed else 'critical' }}">{{ 'Fixed' if v.is_fixed else 'Open' }}</span>
+                        </div>
                     </div>
-                    <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">{{ v.description }}</p>
+                    <p style="font-size: 0.9rem; margin-bottom: 0.75rem; color: var(--color-muted);">{{ v.description }}</p>
                     
-                    <div style="background: #eff6ff; padding: 0.75rem; border-radius: 8px; border-left: 3px solid var(--color-primary); margin-top: 0.75rem;">
-                        <span style="font-weight: 600; font-size: 0.85rem; color: var(--color-primary);">AI Explanation:</span>
-                        <p style="font-size: 0.85rem; margin-top: 0.25rem; color: var(--color-text);">{{ v.ai_explanation }}</p>
+                    <div style="background: #eff6ff; padding: 0.75rem; border-radius: 8px; border-left: 3px solid var(--color-primary); margin-top: 0.5rem;">
+                        <span style="font-weight: 600; font-size: 0.8rem; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.05em;">🧠 AI Explanation</span>
+                        <p style="font-size: 0.875rem; margin-top: 0.35rem; color: var(--color-text); line-height: 1.6;">{{ v.ai_explanation }}</p>
                     </div>
 
+                    {% if current_user.role == 'admin' %}
                     <div style="background: #f0fdf4; padding: 0.75rem; border-radius: 8px; margin-top: 0.75rem; border: 1px solid #bbf7d0;">
-                        <code style="font-size: 0.8rem; color: var(--color-success);">Suggested Fix: {{ v.fix_suggestion }}</code>
-                    </div>
-                    {% if v.mock_before_code and v.mock_after_code %}
-                    <div style="margin-top: 0.75rem;">
-                        <p style="font-weight: 600; font-size: 0.85rem;">Mock Patch Preview</p>
-                        <div style="display: grid; gap: 0.5rem; margin-top: 0.5rem;">
-                            <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 0.75rem;">
-                                <p style="font-size: 0.75rem; color: #be123c; margin-bottom: 0.25rem;">Before</p>
-                                <pre style="font-size: 0.8rem; white-space: pre-wrap;"><code>{{ v.mock_before_code }}</code></pre>
-                            </div>
-                            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.75rem;">
-                                <p style="font-size: 0.75rem; color: #15803d; margin-bottom: 0.25rem;">After</p>
-                                <pre style="font-size: 0.8rem; white-space: pre-wrap;"><code>{{ v.mock_after_code }}</code></pre>
-                            </div>
-                        </div>
+                        <span style="font-weight: 600; font-size: 0.8rem; color: var(--color-success); text-transform: uppercase; letter-spacing: 0.05em;">🛠 Fix Recommendation</span>
+                        <p style="font-size: 0.875rem; margin-top: 0.35rem; color: var(--color-text); line-height: 1.6;">{{ v.fix_suggestion }}</p>
                     </div>
                     {% endif %}
                 </div>
@@ -82,7 +89,7 @@
 
     <!-- Side Panel: Live Logs -->
     <div class="card" style="display: flex; flex-direction: column;">
-        <h2 class="section-title">Live Activity Log</h2>
+        <h2 class="section-title">Transparency Log</h2>
         <div id="liveLogs" class="log-stream" style="flex: 1; margin-top: 1rem;">
             {% for log in logs %}
             <div class="log-item">
@@ -97,104 +104,158 @@
 
 <script>
     const projectId = '{{ project.id }}';
+    const isAdmin = {{ 'true' if current_user.role == 'admin' else 'false' }};
 
     async function startScan() {
         const btn = document.getElementById('startScanBtn');
         btn.innerHTML = '<span class="scanning-indicator"></span> Scanning...';
         btn.disabled = true;
 
-        const res = await fetch(`/api/project/${projectId}/scan`, { method: 'POST' });
-        const data = await res.json();
-        
-        if (res.ok) {
-            btn.innerHTML = 'Scan + Auto-Fix Completed';
-        } else {
-            btn.innerHTML = 'Scan Failed';
+        try {
+            const res = await fetch(`/api/project/${projectId}/scan`, { method: 'POST' });
+            const data = await res.json();
+            btn.innerHTML = res.ok ? '✓ Scan Completed' : '✗ Scan Failed';
+        } catch(e) {
+            btn.innerHTML = '✗ Error';
         }
         
-        setTimeout(() => { btn.innerHTML = 'Start Full Scan'; btn.disabled = false; }, 3000);
+        await refreshData();
+        setTimeout(() => { btn.innerHTML = '▶ Start Full Scan'; btn.disabled = false; }, 3000);
+    }
+
+    async function triggerFix() {
+        if (!confirm("Apply auto-fix to all open vulnerabilities? This will simulate a Pull Request to the target repository.")) return;
+        const btn = document.getElementById('triggerFixBtn');
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Applying Fix...';
         
-        refreshData();
+        await fetch(`/api/project/${projectId}/fix`, { method: 'POST' });
+        await refreshData();
+        btn.disabled = false;
+        btn.innerHTML = '🛠 Apply Auto-Fix';
+    }
+
+    function updateScoreBanner(score, rating, vulns) {
+        const scoreNum = document.getElementById('scoreNumber');
+        const scoreRating = document.getElementById('scoreRating');
+        const scoreFill = document.getElementById('scoreBarFill');
+        const scoreBanner = document.getElementById('scoreBanner');
+        const scoreBreakdown = document.getElementById('scoreBreakdown');
+
+        scoreNum.textContent = score;
+        scoreRating.textContent = rating;
+
+        // Color logic
+        let color, bg, borderColor;
+        if (score >= 85) {
+            color = '#16a34a'; bg = '#dcfce7'; borderColor = '#22c55e';
+        } else if (score >= 70) {
+            color = '#ca8a04'; bg = '#fef9c3'; borderColor = '#eab308';
+        } else if (score >= 50) {
+            color = '#ea580c'; bg = '#fff7ed'; borderColor = '#f97316';
+        } else {
+            color = '#dc2626'; bg = '#fef2f2'; borderColor = '#ef4444';
+        }
+
+        scoreNum.style.color = color;
+        scoreRating.style.color = color;
+        scoreRating.style.background = bg;
+        scoreFill.style.background = borderColor;
+        scoreFill.style.width = score + '%';
+        scoreBanner.style.borderColor = borderColor;
+
+        // Breakdown text
+        const open = vulns.filter(v => !v.is_fixed);
+        const high = open.filter(v => v.severity === 'High').length;
+        const med = open.filter(v => v.severity === 'Medium').length;
+        const low = open.filter(v => v.severity === 'Low').length;
+        if (open.length === 0) {
+            scoreBreakdown.textContent = 'All clear — no open vulnerabilities';
+        } else {
+            scoreBreakdown.textContent = `${open.length} open: ${high} High · ${med} Medium · ${low} Low`;
+        }
     }
 
     async function refreshData() {
-        const stateRes = await fetch(`/api/project/${projectId}/state`);
-        if (!stateRes.ok) return;
-        const state = await stateRes.json();
-
-        document.getElementById('securityScore').textContent = state.security_score;
-        document.getElementById('scoreStats').textContent = `Total: ${state.counts.total} | Fixed: ${state.counts.fixed} | Open: ${state.counts.open}`;
-
         // Fetch logs
-        const logs = state.logs;
-        const logContainer = document.getElementById('liveLogs');
-        logContainer.innerHTML = '';
-        logs.forEach(l => {
-            let color = 'var(--color-accent)';
-            if (l.action_type.includes('SCAN')) color = 'var(--color-primary)';
-            else if (l.action_type.includes('VULN')) color = 'var(--color-error)';
-            else if (l.action_type.includes('FIX')) color = 'var(--color-success)';
-            
-            logContainer.innerHTML += `
-            <div class="log-item">
-                <span class="log-time">[${l.timestamp.split(' ')[1]}]</span>
-                <span style="color: ${color}; font-weight: 600;">[${l.action_type}]</span>
-                <span>${l.detail}</span>
-            </div>`;
-        });
+        const logRes = await fetch(`/api/project/${projectId}/logs`);
+        if (logRes.ok) {
+            const logs = await logRes.json();
+            const logContainer = document.getElementById('liveLogs');
+            logContainer.innerHTML = '';
+            logs.forEach(l => {
+                let color = 'var(--color-accent)';
+                if (l.action_type.includes('SCAN')) color = 'var(--color-primary)';
+                else if (l.action_type.includes('VULN')) color = 'var(--color-error)';
+                else if (l.action_type.includes('FIX')) color = 'var(--color-success)';
+                
+                logContainer.innerHTML += `
+                <div class="log-item">
+                    <span class="log-time">[${l.timestamp.split(' ')[1]}]</span>
+                    <span style="color: ${color}; font-weight: 600;">[${l.action_type}]</span>
+                    <span>${l.detail}</span>
+                </div>`;
+            });
+        }
 
-        // Fetch vulns
-        const vulns = state.vulns;
+        // Fetch vulns + score
+        const vulnRes = await fetch(`/api/project/${projectId}/vulns`);
+        if (!vulnRes.ok) return;
+        const data = await vulnRes.json();
+        
+        const vulns = data.vulns || [];
+        updateScoreBanner(data.score ?? 100, data.rating ?? 'A', vulns);
+
         const vulnContainer = document.getElementById('scannedVulns');
         if (vulns.length === 0) {
-            vulnContainer.innerHTML = '<p style="color: var(--color-muted);">No vulnerabilities detected yet. Run a scan to populate.</p>';
+            vulnContainer.innerHTML = `
+            <div style="text-align: center; padding: 3rem; color: var(--color-muted);">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
+                <p>No vulnerabilities detected yet. Run a scan to populate.</p>
+            </div>`;
         } else {
             vulnContainer.innerHTML = '';
             vulns.forEach(v => {
                 const badgeClass = v.is_fixed ? 'safe' : 'critical';
                 const badgeText = v.is_fixed ? 'Fixed' : 'Open';
                 const fixedClass = v.is_fixed ? 'fixed' : '';
+                const sev = v.severity || 'Medium';
+                const sevClass = sev === 'High' ? 'critical' : (sev === 'Medium' ? 'warning' : 'info');
                 
-                const snippetHtml = (v.mock_before_code && v.mock_after_code) ? `
-                <div style="margin-top: 0.75rem;">
-                    <p style="font-weight: 600; font-size: 0.85rem;">Mock Patch Preview</p>
-                    <div style="display: grid; gap: 0.5rem; margin-top: 0.5rem;">
-                        <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 0.75rem;">
-                            <p style="font-size: 0.75rem; color: #be123c; margin-bottom: 0.25rem;">Before</p>
-                            <pre style="font-size: 0.8rem; white-space: pre-wrap;"><code>${v.mock_before_code}</code></pre>
-                        </div>
-                        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.75rem;">
-                            <p style="font-size: 0.75rem; color: #15803d; margin-bottom: 0.25rem;">After</p>
-                            <pre style="font-size: 0.8rem; white-space: pre-wrap;"><code>${v.mock_after_code}</code></pre>
-                        </div>
-                    </div>
-                </div>` : '';
-
-                const fixHtml = `
-                <div style="background: #f0fdf4; padding: 0.75rem; border-radius: 8px; margin-top: 0.75rem; border: 1px solid #bbf7d0;">
-                    <code style="font-size: 0.8rem; color: var(--color-success);">Suggested Fix: ${v.fix_suggestion}</code>
-                </div>`;
+                let adminHtml = '';
+                if (isAdmin) {
+                    adminHtml = `
+                    <div style="background: #f0fdf4; padding: 0.75rem; border-radius: 8px; margin-top: 0.75rem; border: 1px solid #bbf7d0;">
+                        <span style="font-weight: 600; font-size: 0.8rem; color: var(--color-success); text-transform: uppercase; letter-spacing: 0.05em;">🛠 Fix Recommendation</span>
+                        <p style="font-size: 0.875rem; margin-top: 0.35rem; color: var(--color-text); line-height: 1.6;">${v.fix_suggestion || 'N/A'}</p>
+                    </div>`;
+                }
 
                 vulnContainer.innerHTML += `
                 <div class="vuln-item ${fixedClass}">
                     <div class="vuln-header">
-                        <strong>${v.vuln_type} at <code>${v.endpoint}</code></strong>
-                        <span class="badge ${badgeClass}">${badgeText}</span>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <strong>${v.vuln_type}</strong>
+                            <code style="font-size: 0.8rem; background: #f1f5f9; padding: 0.1rem 0.4rem; border-radius: 4px;">${v.endpoint}</code>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <span class="badge ${sevClass}">${sev}</span>
+                            <span class="badge ${badgeClass}">${badgeText}</span>
+                        </div>
                     </div>
-                    <p style="font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--color-muted);">${v.description}</p>
-                    <div style="background: #eff6ff; padding: 0.75rem; border-radius: 8px; border-left: 3px solid var(--color-primary); margin-top: 0.75rem;">
-                        <span style="font-weight: 600; font-size: 0.85rem; color: var(--color-primary);">AI Explanation:</span>
-                        <p style="font-size: 0.85rem; margin-top: 0.25rem; color: var(--color-text);">${v.ai_explanation}</p>
+                    <p style="font-size: 0.9rem; margin-bottom: 0.75rem; color: var(--color-muted);">${v.description}</p>
+                    <div style="background: #eff6ff; padding: 0.75rem; border-radius: 8px; border-left: 3px solid var(--color-primary); margin-top: 0.5rem;">
+                        <span style="font-weight: 600; font-size: 0.8rem; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.05em;">🧠 AI Explanation</span>
+                        <p style="font-size: 0.875rem; margin-top: 0.35rem; color: var(--color-text); line-height: 1.6;">${v.ai_explanation || ''}</p>
                     </div>
-                    ${fixHtml}
-                    ${snippetHtml}
+                    ${adminHtml}
                 </div>`;
             });
         }
     }
 
-    // Auto-refresh every 3 seconds for the "Real-time" effect
-    setInterval(refreshData, 3000);
+    // Initial load + auto-refresh every 4 seconds
     refreshData();
+    setInterval(refreshData, 4000);
 </script>
 {% endblock %}

@@ -316,6 +316,7 @@ button.danger:hover {
 .badge.critical { background: #fef2f2; color: var(--color-error); border: 1px solid #fecaca; }
 .badge.safe { background: #f0fdf4; color: var(--color-success); border: 1px solid #bbf7d0; }
 .badge.info { background: #eff6ff; color: var(--color-primary); border: 1px solid #bfdbfe; }
+.badge.warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
 
 .section-title {
     font-size: 1.25rem;
