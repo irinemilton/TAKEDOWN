@@ -32,15 +32,36 @@ jobs:
           pip install bandit pip-audit
 
       - name: Run Bandit (code scan)
-        run: bandit -r . -x ./.venv,./venv,./tests -f txt -o bandit-report.txt
+        id: bandit_scan
+        run: |
+          set +e
+          bandit -r . -x ./.venv,./venv,./tests -f txt -o bandit-report.txt
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          # Bandit returns 1 when it finds issues; reserve failure for tool errors.
+          if [ "$code" -gt 1 ]; then
+            exit "$code"
+          fi
 
       - name: Run pip-audit (dependency scan)
-        run: pip-audit -r requirements.txt --format markdown --output pip-audit-report.md
+        id: pip_audit_scan
+        run: |
+          set +e
+          pip-audit -r requirements.txt --format markdown --output pip-audit-report.md
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          # pip-audit returns 1 when vulnerabilities are found.
+          if [ "$code" -gt 1 ]; then
+            exit "$code"
+          fi
 
       - name: Build security summary
         if: always()
         run: |
           echo "## Security Scan Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Bandit exit code: ${{ steps.bandit_scan.outputs.exit_code }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- pip-audit exit code: ${{ steps.pip_audit_scan.outputs.exit_code }}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "### Bandit" >> "$GITHUB_STEP_SUMMARY"
           if [ -s bandit-report.txt ]; then
