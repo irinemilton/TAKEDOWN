@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="dashboard-header" style="align-items: flex-start; flex-direction: column;">
+    <a href="{{ url_for('dashboard.index') }}" style="font-size: 0.85rem; margin-bottom: 1rem;">← Back to Workspaces</a>
+    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+        <div>
+            <h1>{{ project.name }} <span style="font-size: 1rem; color: var(--color-muted); font-weight: 400; word-break: break-all;">({{ project.target_url }})</span></h1>
+            <p style="margin-top: 0.5rem; color: var(--color-muted);">Source Code Analysis (SAST)</p>
+        </div>
+        
+        <div style="display: flex; gap: 1rem;">
+            {% if current_user.role == 'client' and not project.consent_granted %}
+                <form action="{{ url_for('dashboard.grant_consent', project_id=project.id) }}" method="POST">
+                    <button type="submit">Grant Scanner Access</button>
+                </form>
+            {% elif current_user.role == 'admin' %}
+                {% if project.consent_granted %}
+                    <button id="startScanBtn" onclick="startScan()">Start Full Scan</button>
+                    {% if current_user.plan == 'premium' %}
+                        <button id="triggerFixBtn" class="secondary" onclick="triggerFix()" style="border-color: var(--color-warning); color: var(--color-warning);">Apply Auto-Fix</button>
+                    {% endif %}
+                {% else %}
+                    <span class="badge critical" style="display: inline-flex; align-items: center;">Awaiting Client Consent</span>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="grid" style="grid-template-columns: 2fr 1fr;">
+    <!-- Main Panel: Vulnerabilities -->
+    <div class="card" style="display: flex; flex-direction: column;">
+        <h2 class="section-title">Security Posture</h2>
+        <div id="scannedVulns" class="vuln-list" style="flex: 1; margin-top: 1rem;">
+            <!-- Rendered via JS based on API, but we can do initial render too -->
+            {% if not vulns %}
+                <p style="color: var(--color-muted);">No vulnerabilities detected yet. Run a scan to populate.</p>
+            {% else %}
+                {% for v in vulns %}
+                <div class="vuln-item {{ 'fixed' if v.is_fixed else '' }}">
+                    <div class="vuln-header">
+                        <strong>{{ v.vuln_type }} at <code>{{ v.endpoint }}</code></strong>
+                        <span class="badge {{ 'safe' if v.is_fixed else 'critical' }}">{{ 'Fixed' if v.is_fixed else 'Open' }}</span>
+                    </div>
+                    <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">{{ v.description }}</p>
+                    
+                    <div style="background: #eff6ff; padding: 0.75rem; border-radius: 8px; border-left: 3px solid var(--color-primary); margin-top: 0.75rem;">
+                        <span style="font-weight: 600; font-size: 0.85rem; color: var(--color-primary);">AI Explanation:</span>
+                        <p style="font-size: 0.85rem; margin-top: 0.25rem; color: var(--color-text);">{{ v.ai_explanation }}</p>
+                    </div>
+
+                    {% if current_user.role == 'admin' %}
+                    <div style="background: #f0fdf4; padding: 0.75rem; border-radius: 8px; margin-top: 0.75rem; border: 1px solid #bbf7d0;">
+                        <code style="font-size: 0.8rem; color: var(--color-success);">Suggested Fix: {{ v.fix_suggestion }}</code>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Side Panel: Live Logs -->
+    <div class="card" style="display: flex; flex-direction: column;">
+        <h2 class="section-title">Live Activity Log</h2>
+        <div id="liveLogs" class="log-stream" style="flex: 1; margin-top: 1rem;">
+            {% for log in logs %}
+            <div class="log-item">
+                <span class="log-time">[{{ log.timestamp.strftime('%H:%M:%S') }}]</span>
+                <span style="color: {% if 'SCAN' in log.action_type %}var(--color-primary){% elif 'VULN' in log.action_type %}var(--color-error){% elif 'FIX' in log.action_type %}var(--color-success){% else %}var(--color-accent){% endif %}; font-weight: 600;">[{{ log.action_type }}]</span>
+                <span>{{ log.detail }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    const projectId = '{{ project.id }}';
+
+    async function startScan() {
+        const btn = document.getElementById('startScanBtn');
+        btn.innerHTML = '<span class="scanning-indicator"></span> Scanning...';
+        btn.disabled = true;
+
+        const res = await fetch(`/api/project/${projectId}/scan`, { method: 'POST' });
+        const data = await res.json();
+        
+        if (res.ok) {
+            btn.innerHTML = 'Scan Completed';
+        } else {
+            btn.innerHTML = 'Scan Failed';
+        }
+        
+        setTimeout(() => { btn.innerHTML = 'Start Full Scan'; btn.disabled = false; }, 3000);
+        
+        refreshData();
+    }
+
+    async function triggerFix() {
+        if(!confirm("Are you sure you want to deploy the AI auto-fix to the target system?")) return;
+        
+        const res = await fetch(`/api/project/${projectId}/fix`, { method: 'POST' });
+        refreshData();
+    }
+
+    async function refreshData() {
+        // Fetch logs
+        const logRes = await fetch(`/api/project/${projectId}/logs`);
+        const logs = await logRes.json();
+        const logContainer = document.getElementById('liveLogs');
+        logContainer.innerHTML = '';
+        logs.forEach(l => {
+            let color = 'var(--color-accent)';
+            if (l.action_type.includes('SCAN')) color = 'var(--color-primary)';
+            else if (l.action_type.includes('VULN')) color = 'var(--color-error)';
+            else if (l.action_type.includes('FIX')) color = 'var(--color-success)';
+            
+            logContainer.innerHTML += `
+            <div class="log-item">
+                <span class="log-time">[${l.timestamp.split(' ')[1]}]</span>
+                <span style="color: ${color}; font-weight: 600;">[${l.action_type}]</span>
+                <span>${l.detail}</span>
+            </div>`;
+        });
+
+        // Fetch vulns
+        const vulnRes = await fetch(`/api/project/${projectId}/vulns`);
+        const vulns = await vulnRes.json();
+        const vulnContainer = document.getElementById('scannedVulns');
+        if (vulns.length === 0) {
+            vulnContainer.innerHTML = '<p style="color: var(--color-muted);">No vulnerabilities detected yet. Run a scan to populate.</p>';
+        } else {
+            vulnContainer.innerHTML = '';
+            vulns.forEach(v => {
+                const badgeClass = v.is_fixed ? 'safe' : 'critical';
+                const badgeText = v.is_fixed ? 'Fixed' : 'Open';
+                const fixedClass = v.is_fixed ? 'fixed' : '';
+                
+                let adminHtml = '';
+                {% if current_user.role == 'admin' %}
+                adminHtml = `
+                <div style="background: #f0fdf4; padding: 0.75rem; border-radius: 8px; margin-top: 0.75rem; border: 1px solid #bbf7d0;">
+                    <code style="font-size: 0.8rem; color: var(--color-success);">Suggested Fix: ${v.fix_suggestion}</code>
+                </div>`;
+                {% endif %}
+
+                vulnContainer.innerHTML += `
+                <div class="vuln-item ${fixedClass}">
+                    <div class="vuln-header">
+                        <strong>${v.vuln_type} at <code>${v.endpoint}</code></strong>
+                        <span class="badge ${badgeClass}">${badgeText}</span>
+                    </div>
+                    <p style="font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--color-muted);">${v.description}</p>
+                    <div style="background: #eff6ff; padding: 0.75rem; border-radius: 8px; border-left: 3px solid var(--color-primary); margin-top: 0.75rem;">
+                        <span style="font-weight: 600; font-size: 0.85rem; color: var(--color-primary);">AI Explanation:</span>
+                        <p style="font-size: 0.85rem; margin-top: 0.25rem; color: var(--color-text);">${v.ai_explanation}</p>
+                    </div>
+                    ${adminHtml}
+                </div>`;
+            });
+        }
+    }
+
+    // Auto-refresh every 3 seconds for the "Real-time" effect
+    setInterval(refreshData, 3000);
+</script>
+{% endblock %}

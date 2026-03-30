@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="dashboard-header">
+    <h1>Your Workspaces</h1>
+    {% if current_user.role == 'client' %}
+        <button onclick="document.getElementById('newProjectModal').style.display='block'">+ New Project</button>
+    {% endif %}
+</div>
+
+<div class="grid">
+    {% for project in projects %}
+    <a href="{{ url_for('dashboard.project_detail', project_id=project.id) }}" class="card" style="display: block;">
+        <h3>{{ project.name }}</h3>
+        <p style="color: var(--color-muted); font-size: 0.85rem; margin-top: 0.5rem;"><strong>Repository:</strong> <span style="word-break: break-all;">{{ project.target_url }}</span></p>
+        
+        <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+            {% if project.consent_granted %}
+                <span class="badge safe">Access Granted</span>
+            {% else %}
+                <span class="badge critical">Pending Consent</span>
+            {% endif %}
+        </div>
+    </a>
+    {% else %}
+    <div class="card" style="grid-column: 1 / -1; text-align: center; color: var(--color-muted)">
+        <p>No active projects found.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% if current_user.role == 'client' %}
+<div id="newProjectModal" style="display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.7); backdrop-filter: blur(8px); z-index: 100;">
+    <div class="card" style="max-width: 500px; margin: 10% auto; position: relative; border: 1px solid var(--border-color); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);">
+        <h2>Register Codebase for SAST</h2>
+        <p style="color: var(--color-muted); margin-bottom: 2rem;">Enter the public GitHub Repository URL to be analyzed.</p>
+        <form action="{{ url_for('dashboard.create_project') }}" method="POST">
+            <input type="text" name="name" placeholder="Project Name (e.g., Prod Web App)" required>
+            <input type="url" name="target_url" placeholder="GitHub Repo (e.g., https://github.com/user/demo)" required>
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button type="submit">Initialize Workspace</button>
+                <button type="button" class="secondary" onclick="document.getElementById('newProjectModal').style.display='none'">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
