@@ -23,6 +23,14 @@ def index():
         projects = Project.query.filter_by(client_id=current_user.id).all()
     return render_template('dashboard.html', projects=projects)
 
+@dashboard_bp.route('/showcase')
+@login_required
+def showcase():
+    if current_user.role != 'admin':
+        flash('Access restricted to Security Admins.')
+        return redirect(url_for('dashboard.index'))
+    return render_template('showcase.html')
+
 @dashboard_bp.route('/create_project', methods=['POST'])
 @login_required
 def create_project():

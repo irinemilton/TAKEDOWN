@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAKEDOWN | Zero-Trust Showcase</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #020617;
+            --glass-bg: rgba(15, 23, 42, 0.6);
+            --accent-cyan: #22d3ee;
+            --accent-purple: #a855f7;
+            --accent-red: #ef4444;
+            --accent-green: #10b981;
+        }
+
+        body {
+            background: var(--bg-deep);
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(34, 211, 238, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.05) 0%, transparent 40%);
+        }
+
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .glow-cyan { text-shadow: 0 0 10px rgba(34, 211, 238, 0.5); }
+        .glow-purple { text-shadow: 0 0 10px rgba(168, 85, 247, 0.5); }
+        .border-glow-purple { box-shadow: 0 0 20px rgba(168, 85, 247, 0.2); }
+
+        .terminal-log {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pulse { animation: pulseAnim 2s infinite; }
+        @keyframes pulseAnim {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.98); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .code-window {
+            background: #000;
+            border-radius: 8px;
+            padding: 1.25rem;
+            min-height: 120px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            position: relative;
+        }
+
+        .code-label {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.6rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            border-bottom-left-radius: 8px;
+        }
+
+        /* Toggle Switch Styling */
+        .toggle-switch {
+            width: 320px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 4px;
+            border-radius: 99px;
+            display: flex;
+            position: relative;
+        }
+        .toggle-btn {
+            flex: 1;
+            text-align: center;
+            padding: 8px 0;
+            font-size: 0.85rem;
+            font-weight: 600;
+            z-index: 10;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        .toggle-slider {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: calc(50% - 4px);
+            height: calc(100% - 8px);
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border-radius: 99px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .active-role { color: #fff; }
+        .inactive-role { color: #64748b; }
+    </style>
+</head>
+<body class="p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col items-center mb-12">
+            <h1 class="text-4xl font-extrabold tracking-tighter mb-6 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-purple-500">
+                TAKEDOWN <span class="text-white">// Showroom</span>
+            </h1>
+
+            <div class="toggle-switch" id="roleToggle">
+                <div class="toggle-slider" id="slider"></div>
+                <div class="toggle-btn active-role" onclick="switchRole('client')">CLIENT VIEW</div>
+                <div class="toggle-btn inactive-role" onclick="switchRole('admin')">SECURITY ADMIN VIEW</div>
+            </div>
+        </div>
+
+        <!-- 🛡️ CLIENT VIEW SECTION -->
+        <div id="clientSection" class="block animate-in fade-in duration-500">
+            <div class="glass max-w-2xl mx-auto p-12 rounded-3xl text-center border-glow-purple">
+                <div class="mb-8 flex justify-center">
+                    <div class="w-24 h-24 rounded-full bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 glow-cyan">
+                        <svg id="lockIcon" xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-cyan-400 transition-all duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                </div>
+                <h2 class="text-2xl font-bold mb-4">Zero-Trust Consent Panel</h2>
+                <p class="text-slate-400 mb-8 max-w-sm mx-auto leading-relaxed">
+                    Grant temporary write access to the Ephemeral Engine to perform AI-driven remediation.
+                </p>
+                
+                <button id="grantBtn" onclick="runGrantAccess()" class="w-full py-4 rounded-xl font-bold tracking-wide transition-all active:scale-95 bg-gradient-to-r from-cyan-500 to-purple-600 shadow-lg shadow-cyan-500/20">
+                    Grant Read-Only Ephemeral Access
+                </button>
+                
+                <p class="mt-6 text-xs font-medium text-slate-500 italic uppercase letter-spacing-widest">
+                    Zero-Trust Architecture: No scans, simulations, or AI fixes execute without explicit permission.
+                </p>
+            </div>
+        </div>
+
+        <!-- ⚡ ADMIN VIEW SECTION -->
+        <div id="adminSection" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in slide-in-from-bottom-5 duration-500">
+            
+            <!-- 📟 Ephemeral Engine Ledger -->
+            <div class="flex flex-col h-full">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xs font-extrabold uppercase tracking-widest text-emerald-400 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-emerald-500 rounded-full pulse"></span>
+                        Ephemeral Engine Ledger
+                    </h3>
+                    <div class="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full font-bold">ZERO-RETENTION ACTIVE</div>
+                </div>
+                
+                <div id="terminal" class="glass rounded-xl p-6 h-[420px] overflow-y-auto flex-1 flex flex-col gap-3 scroll-smooth">
+                    <div class="text-slate-500 text-xs italic">[SESSION INITIALIZED: volatile_ram_mode]</div>
+                </div>
+                
+                <button onclick="runEngineSimulation()" class="mt-4 bg-slate-800 hover:bg-slate-700 py-3 rounded-lg text-xs font-bold transition-all">RE-RUN SECURE OPS PIPELINE</button>
+            </div>
+
+            <!-- 🧠 AI Privacy Sanitizer -->
+            <div class="flex flex-col h-full">
+                <h3 class="text-xs font-extrabold uppercase tracking-widest text-purple-400 mb-4">AI Privacy Sanitizer</h3>
+                
+                <div class="glass rounded-xl p-6 flex-1 flex flex-col">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <!-- Left: Raw Code -->
+                        <div class="code-window">
+                            <div class="code-label bg-red-500 text-white">Raw Local Code</div>
+                            <pre class="text-white/80 leading-relaxed pt-4">const firebase = {
+  apiKey: '<span class="text-red-400 font-bold underline decoration-red-400">AIzaSy_SECRET_123</span>'
+};</pre>
+                        </div>
+                        
+                        <!-- Right: Masked Code -->
+                        <div class="code-window">
+                            <div class="code-label bg-emerald-500 text-white">Masked Payload</div>
+                            <pre class="text-white/80 leading-relaxed pt-4">const firebase = {
+  apiKey: '<span class="text-emerald-400 font-bold bg-emerald-400/10 px-1">[REDACTED_BY_FILTER]</span>'
+};</pre>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 flex flex-col justify-center items-center text-center">
+                        <button id="pushPrBtn" onclick="runPrPush()" class="w-full bg-purple-600 hover:bg-purple-500 py-4 rounded-xl font-bold transition-all shadow-xl shadow-purple-500/20">
+                            Sanitize & Push Pull Request
+                        </button>
+                        
+                        <div id="successMsg" class="mt-6 opacity-0 translate-y-4 transition-all duration-700 pointer-events-none">
+                            <p class="text-emerald-400 font-bold text-sm tracking-tight mb-1">✅ Privacy Masking Complete</p>
+                            <p class="text-slate-400 text-[10px] uppercase">Zero secrets transmitted to public LLM. Safe Write Operation executed.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ── Navigation Logic ──────────────────────────────────────────────────
+        function switchRole(role) {
+            const clientSec = document.getElementById('clientSection');
+            const adminSec = document.getElementById('adminSection');
+            const slider = document.getElementById('slider');
+            const btns = document.querySelectorAll('.toggle-btn');
+
+            if (role === 'client') {
+                clientSec.classList.remove('hidden');
+                adminSec.classList.add('hidden');
+                slider.style.left = '4px';
+                btns[0].className = 'toggle-btn active-role';
+                btns[1].className = 'toggle-btn inactive-role';
+            } else {
+                clientSec.classList.add('hidden');
+                adminSec.classList.remove('hidden');
+                slider.style.left = 'calc(50% + 0px)';
+                btns[0].className = 'toggle-btn inactive-role';
+                btns[1].className = 'toggle-btn active-role';
+                // Trigger terminal if empty
+                if (document.getElementById('terminal').children.length <= 1) {
+                    runEngineSimulation();
+                }
+            }
+        }
+
+        // ── Client Consent Logic ──────────────────────────────────────────────
+        function runGrantAccess() {
+            const btn = document.getElementById('grantBtn');
+            const icon = document.getElementById('lockIcon');
+            
+            btn.disabled = true;
+            btn.textContent = 'Verifying Scoped Tokens...';
+            btn.style.opacity = '0.7';
+
+            setTimeout(() => {
+                btn.style.background = '#10b981';
+                btn.textContent = 'Access Granted ✅';
+                btn.style.opacity = '1';
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />';
+                icon.classList.remove('text-cyan-400');
+                icon.classList.add('text-emerald-400');
+            }, 2000);
+        }
+
+        // ── Terminal / Engine Simulation ──────────────────────────────────────
+        const logs = [
+            { t: "Authenticating Scoped Write Token (Pull Requests Only)...", c: "text-cyan-400" },
+            { t: "Pulling client repository directly into volatile RAM...", c: "text-slate-300" },
+            { t: "Executing SAST Engine. No disk writes permitted...", c: "text-slate-300" },
+            { t: "Vulnerability identified. Executing AI Privacy Masking...", c: "text-purple-400" },
+            { t: "AI Patch generated. Pushing secure Pull Request to client repo...", c: "text-cyan-400 font-bold" },
+            { t: "PR Merged. Revoking Write Token. Purging all volatile memory...", c: "text-red-400" },
+            { t: "SYSTEM SECURE: 0 bytes of client code retained.", c: "text-emerald-400 font-extrabold glow-cyan" }
+        ];
+
+        let logIdx = 0;
+        function runEngineSimulation() {
+            const term = document.getElementById('terminal');
+            term.innerHTML = '<div class="text-slate-500 text-xs italic">[RE-INITIALIZING VOLATILE BUFFER...]</div>';
+            logIdx = 0;
+            
+            const interval = setInterval(() => {
+                if (logIdx >= logs.length) {
+                    clearInterval(interval);
+                    return;
+                }
+                const log = logs[logIdx];
+                const div = document.createElement('div');
+                div.className = `terminal-log ${log.c}`;
+                div.innerHTML = `<span class="text-white opacity-20 mr-2">></span> ${log.t}`;
+                term.appendChild(div);
+                term.scrollTop = term.scrollHeight;
+                logIdx++;
+            }, 1000);
+        }
+
+        // ── AI Privacy / PR Push Logic ────────────────────────────────────────
+        function runPrPush() {
+            const btn = document.getElementById('pushPrBtn');
+            const msg = document.getElementById('successMsg');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<div class="flex items-center justify-center gap-3"><svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Pushing PR...</div>';
+
+            setTimeout(() => {
+                btn.style.background = '#10b981';
+                btn.textContent = 'PR Successfully Pushed ✅';
+                msg.classList.remove('opacity-0', 'translate-y-4');
+                msg.classList.add('opacity-1', 'translate-y-0');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

@@ -23,6 +23,9 @@
                     {% endif %}
                 </span>
                 <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+                {% if current_user.role == 'admin' %}
+                    <a href="{{ url_for('dashboard.showcase') }}" style="font-weight: 700;">🛡️ Showcase</a>
+                {% endif %}
                 {% if current_user.plan != 'premium' %}
                     <a href="{{ url_for('auth.choose_plan') }}" style="color:#7c3aed; font-weight:700;">🚀 Upgrade</a>
                 {% endif %}

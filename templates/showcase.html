@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="dashboard-header">
+    <div>
+        <h1>🛡️ Zero-Trust Showcase</h1>
+        <p style="color: var(--color-muted); margin-top: 0.5rem;">Live demonstration of Ephemeral Engine, Privacy Masking, and Consent Architecture.</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem; align-items: center;">
+        <span class="badge critical" style="border-radius: 99px; padding: 0.4rem 1rem;">Admin Only</span>
+    </div>
+</div>
+
+<!-- Role Toggle -->
+<div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2.5rem;">
+    <span style="font-size: 0.8rem; font-weight: 700; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.08em;">View as:</span>
+    <div id="roleToggle" style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 99px; padding: 4px; display: flex; position: relative; width: 280px;">
+        <div id="slider" style="position: absolute; top: 4px; left: 4px; width: calc(50% - 4px); height: calc(100% - 8px); background: var(--color-accent); border-radius: 99px; transition: all 0.3s cubic-bezier(0.4,0,0.2,1);"></div>
+        <button onclick="switchRole('client')" id="btn-client" style="flex: 1; background: transparent; border: none; color: #fff; font-size: 0.8rem; font-weight: 700; z-index: 10; padding: 0.4rem 0; border-radius: 99px; cursor: pointer; transition: color 0.3s;">CLIENT</button>
+        <button onclick="switchRole('admin')" id="btn-admin" style="flex: 1; background: transparent; border: none; color: var(--color-muted); font-size: 0.8rem; font-weight: 700; z-index: 10; padding: 0.4rem 0; border-radius: 99px; cursor: pointer; transition: color 0.3s;">SECURITY ADMIN</button>
+    </div>
+</div>
+
+<!-- ═══ CLIENT VIEW ═══════════════════════════════════════════════════════════ -->
+<div id="clientSection">
+    <div style="max-width: 580px; margin: 0 auto;">
+        <div class="card" style="text-align: center; padding: 3.5rem 2.5rem; border-top: 4px solid var(--color-primary);">
+
+            <div id="lockIconWrap" style="width: 80px; height: 80px; margin: 0 auto 2rem; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid #bfdbfe;">
+                <svg id="lockIcon" xmlns="http://www.w3.org/2000/svg" style="width: 38px; height: 38px; color: var(--color-primary); stroke: currentColor; transition: all 0.5s ease;" fill="none" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            </div>
+
+            <h2 style="font-size: 1.6rem; letter-spacing: -0.03em; margin-bottom: 0.75rem;">Zero-Trust Consent Panel</h2>
+            <p style="color: var(--color-muted); margin-bottom: 2.5rem; line-height: 1.7;">
+                Grant the Ephemeral Engine temporary read access to perform AI-driven security remediation on your repository.
+            </p>
+
+            <button id="grantBtn" onclick="runGrantAccess()" style="width: 100%; padding: 1rem; font-size: 1rem; font-weight: 700;">
+                🔒 Grant Read-Only Ephemeral Access
+            </button>
+
+            <p style="margin-top: 1.75rem; font-size: 0.75rem; color: var(--color-muted); font-style: italic; line-height: 1.6; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+                Zero-Trust Architecture: No scans, simulations, or AI fixes execute without explicit permission.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ ADMIN VIEW ══════════════════════════════════════════════════════════════ -->
+<div id="adminSection" style="display: none;">
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 2rem;">
+
+        <!-- 📟 Ephemeral Engine Ledger -->
+        <div class="card" style="padding: 1.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+                <h2 class="section-title" style="margin: 0; padding: 0; border: none; font-size: 1rem; gap: 0.6rem;">
+                    <span class="scanning-indicator" style="background: var(--color-success);"></span>
+                    Ephemeral Engine Ledger
+                </h2>
+                <span class="badge safe" style="border-radius: 99px; font-size: 0.65rem;">ZERO-RETENTION ACTIVE</span>
+            </div>
+
+            <div id="terminal" class="log-stream" style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; height: 340px; display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="font-family: 'Fira Code', monospace; font-size: 0.8rem; color: var(--color-muted); font-style: italic;">[SESSION INITIALIZED: volatile_ram_mode=true]</div>
+            </div>
+
+            <button onclick="runEngineSimulation()" class="secondary" style="width: 100%; margin-top: 1.25rem; font-size: 0.85rem; font-weight: 700; padding: 0.75rem;">
+                ▶ Re-run Secure Ops Pipeline
+            </button>
+        </div>
+
+        <!-- 🧠 AI Privacy Sanitizer -->
+        <div class="card" style="padding: 1.75rem;">
+            <h2 class="section-title" style="font-size: 1rem;">🧠 AI Privacy Sanitizer</h2>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                <!-- Left: Raw Code -->
+                <div style="background: #0f172a; border-radius: 10px; padding: 1rem; position: relative; min-height: 110px;">
+                    <div style="position: absolute; top: 0; right: 0; background: var(--color-error); color: #fff; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; padding: 0.2rem 0.6rem; border-bottom-left-radius: 8px;">Raw Code</div>
+                    <pre style="font-family: 'Fira Code', monospace; font-size: 0.75rem; color: #94a3b8; line-height: 1.8; margin-top: 1.2rem;">const firebase = {
+  apiKey: '<span style="color: #ef4444; font-weight: 700; text-decoration: underline;">AIzaSy_SECRET_123</span>'
+};</pre>
+                </div>
+                <!-- Right: Masked Code -->
+                <div style="background: #0f172a; border-radius: 10px; padding: 1rem; position: relative; min-height: 110px; border: 1px solid rgba(16,185,129,0.3);">
+                    <div style="position: absolute; top: 0; right: 0; background: var(--color-success); color: #fff; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; padding: 0.2rem 0.6rem; border-bottom-left-radius: 8px;">Masked</div>
+                    <pre style="font-family: 'Fira Code', monospace; font-size: 0.75rem; color: #94a3b8; line-height: 1.8; margin-top: 1.2rem;">const firebase = {
+  apiKey: '<span style="color: #10b981; font-weight: 700; background: rgba(16,185,129,0.1); padding: 0 2px;">[REDACTED]</span>'
+};</pre>
+                </div>
+            </div>
+
+            <button id="pushPrBtn" onclick="runPrPush()" style="width: 100%; background: linear-gradient(135deg, #7c3aed, #2563eb); border: none; font-weight: 700; padding: 1rem; font-size: 0.95rem;">
+                🚀 Sanitize & Push Pull Request
+            </button>
+
+            <div id="successMsg" style="margin-top: 1.25rem; padding: 1rem 1.25rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; display: none;">
+                <p style="color: var(--color-success); font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem;">✅ PR Successfully Pushed</p>
+                <p style="color: var(--color-muted); font-size: 0.78rem;">Privacy Masking Complete. Zero secrets transmitted to public LLM. Safe Write Operation executed.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes terminalFadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .term-line { animation: terminalFadeIn 0.3s ease forwards; }
+</style>
+
+<script>
+    // ── Role Toggle ─────────────────────────────────────────────────────────
+    function switchRole(role) {
+        const clientSec = document.getElementById('clientSection');
+        const adminSec  = document.getElementById('adminSection');
+        const slider    = document.getElementById('slider');
+        const btnClient = document.getElementById('btn-client');
+        const btnAdmin  = document.getElementById('btn-admin');
+
+        if (role === 'client') {
+            clientSec.style.display = 'block';
+            adminSec.style.display  = 'none';
+            slider.style.left = '4px';
+            btnClient.style.color = '#fff';
+            btnAdmin.style.color  = 'var(--color-muted)';
+        } else {
+            clientSec.style.display = 'none';
+            adminSec.style.display  = 'block';
+            slider.style.left = 'calc(50%)';
+            btnAdmin.style.color  = '#fff';
+            btnClient.style.color = 'var(--color-muted)';
+            if (document.getElementById('terminal').children.length <= 1) {
+                runEngineSimulation();
+            }
+        }
+    }
+
+    // ── Grant Access Button ─────────────────────────────────────────────────
+    function runGrantAccess() {
+        const btn  = document.getElementById('grantBtn');
+        const icon = document.getElementById('lockIcon');
+        const wrap = document.getElementById('lockIconWrap');
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="scanning-indicator"></span> Verifying Scoped Tokens...';
+        btn.style.opacity = '0.8';
+
+        setTimeout(() => {
+            btn.style.background = 'var(--color-success)';
+            btn.style.borderColor = 'var(--color-success)';
+            btn.style.opacity = '1';
+            btn.innerHTML = '✅ Access Granted';
+            wrap.style.background = '#f0fdf4';
+            wrap.style.borderColor = '#bbf7d0';
+            icon.style.color = 'var(--color-success)';
+            icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>';
+        }, 2000);
+    }
+
+    // ── Ephemeral Terminal ──────────────────────────────────────────────────
+    const LOGS = [
+        { text: 'Authenticating Scoped Write Token (Pull Requests Only)...', type: 'info' },
+        { text: 'Pulling client repository directly into volatile RAM...',    type: 'info' },
+        { text: 'Executing SAST Engine. No disk writes permitted...',         type: 'info' },
+        { text: 'Vulnerability identified. Executing AI Privacy Masking...',  type: 'warn' },
+        { text: 'AI Patch generated. Pushing secure Pull Request to client repo...', type: 'success' },
+        { text: 'PR Merged. Revoking Write Token. Purging all volatile memory...', type: 'error' },
+        { text: 'SYSTEM SECURE: 0 bytes of client code retained.',            type: 'success' },
+    ];
+    const TYPE_COLOR = {
+        info:    'var(--color-primary)',
+        warn:    '#f59e0b',
+        success: 'var(--color-success)',
+        error:   'var(--color-error)',
+    };
+
+    let logIdx = 0;
+    function runEngineSimulation() {
+        const term = document.getElementById('terminal');
+        term.innerHTML = '<div style="font-family:\'Fira Code\',monospace;font-size:0.8rem;color:var(--color-muted);font-style:italic;">[RE-INITIALIZING VOLATILE BUFFER...]</div>';
+        logIdx = 0;
+
+        const iv = setInterval(() => {
+            if (logIdx >= LOGS.length) { clearInterval(iv); return; }
+            const l = LOGS[logIdx];
+            const div = document.createElement('div');
+            div.className = 'log-item term-line';
+            div.style.borderColor = 'transparent';
+            div.style.paddingTop = '0.4rem';
+            div.style.paddingBottom = '0.4rem';
+            div.innerHTML = `
+                <span class="log-time" style="white-space:nowrap;">></span>
+                <span style="color:${TYPE_COLOR[l.type]};font-family:'Fira Code',monospace;font-size:0.82rem;">${l.text}</span>`;
+            term.appendChild(div);
+            term.scrollTop = term.scrollHeight;
+            logIdx++;
+        }, 1000);
+    }
+
+    // ── PR Push Button ──────────────────────────────────────────────────────
+    function runPrPush() {
+        const btn = document.getElementById('pushPrBtn');
+        const msg = document.getElementById('successMsg');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="scanning-indicator" style="background:#fff;"></span> &nbsp;Pushing PR...';
+
+        setTimeout(() => {
+            btn.style.background = 'var(--color-success)';
+            btn.innerHTML = '✅ PR Successfully Pushed';
+            msg.style.display = 'block';
+        }, 2000);
+    }
+</script>
+
+{% endblock %}
