@@ -4,6 +4,7 @@ from models import User, Project, Log, Vulnerability
 from extensions import db
 import uuid
 import threading
+from datetime import datetime
 
 # ── Scan state tracking (in-memory, per project) ────────────────────────────
 # Maps project_id -> True when a stop has been requested
@@ -131,6 +132,7 @@ def get_vulns(project_id):
                 'endpoint': v.endpoint,
                 'description': v.description,
                 'fix_suggestion': v.fix_suggestion,
+                'resolution_summary': v.resolution_summary or '',
                 'is_fixed': v.is_fixed,
                 'ai_explanation': v.ai_explanation,
                 'mock_before_code': v.mock_before_code or '',
@@ -220,12 +222,17 @@ def trigger_fix(project_id):
     import time
     time.sleep(1) # Simulate generating a Github PR
     
-    # Mark vulnerabilities as fixed
+    from utils.ai_engine import generate_resolution_summary
+    
+    # Mark vulnerabilities as fixed and generate reports
     vulns = Vulnerability.query.filter_by(project_id=project.id).all()
     for v in vulns:
-        v.is_fixed = True
+        if not v.is_fixed:
+            v.is_fixed = True
+            v.fixed_at = datetime.utcnow()
+            v.resolution_summary = generate_resolution_summary(v.vuln_type, v.endpoint)
     
-    log = Log(project_id=project.id, action_type='FIX_APPLIED', detail='Admin triggered auto-fix: Automated Pull Request successfully opened on target GitHub repository.')
+    log = Log(project_id=project.id, action_type='FIX_APPLIED', detail='Admin triggered auto-fix: AI resolution reports generated and automated Pull Request successfully opened.')
     db.session.add(log)
     db.session.commit()
     

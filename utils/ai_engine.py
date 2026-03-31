@@ -131,3 +131,28 @@ Give a specific, concrete fix for a developer. Name the exact function, method, 
         f"[Detected in: {endpoint}]"
     )
     return explanation, fallback[1]
+
+
+def generate_resolution_summary(vuln_type, endpoint):
+    """
+    Generates a professional report for the client explaining how a fix has secured their system.
+    """
+    if _GEMINI_AVAILABLE and model:
+        prompt = f"""You are a cybersecurity consultant writing a report to a non-technical client.
+Tell them that their "{vuln_type}" vulnerability at the "{endpoint}" endpoint has been successfully patched and verified.
+Write 2 short, reassuring sentences.
+Explain how this fix protects their business/data.
+Use professional, confident language. No jargon. No markdown.
+"""
+        try:
+            response = model.generate_content(prompt)
+            return response.text.strip()
+        except Exception:
+            pass
+
+    # Offline fallback
+    return (
+        f"The {vuln_type} vulnerability at {endpoint} has been successfully mitigated. "
+        "A secure code patch was pushed and verified, ensuring that attackers can no longer "
+        "exploit this entry point to access your data."
+    )

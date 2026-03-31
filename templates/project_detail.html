@@ -4,46 +4,52 @@
     <a href="{{ url_for('dashboard.index') }}" style="font-size: 0.85rem; margin-bottom: 1rem;">← Back to Workspaces</a>
     <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
         <div>
-            <h1>{{ project.name }} <span style="font-size: 1rem; color: var(--color-muted); font-weight: 400; word-break: break-all;">({{ project.target_url }})</span></h1>
-            <p style="margin-top: 0.5rem; color: var(--color-muted);">Source Code Analysis (SAST) — Static Security Scanner</p>
+            <h1>{{ project.name }} <span
+                    style="font-size: 1rem; color: var(--color-muted); font-weight: 400; word-break: break-all;">({{
+                    project.target_url }})</span></h1>
+            <p style="margin-top: 0.5rem; color: var(--color-muted);">Source Code Analysis (SAST) — Static Security
+                Scanner</p>
         </div>
 
         <div style="display: flex; gap: 1rem; align-items: center;">
             {% if current_user.role == 'client' %}
-                {% if not project.consent_granted %}
-                    <form action="{{ url_for('dashboard.grant_consent', project_id=project.id) }}" method="POST">
-                        <button type="submit">Grant Scanner Access</button>
-                    </form>
-                {% else %}
-                    <!-- Client can stop an active scan -->
-                    <button id="stopScanBtn" onclick="stopScan()"
-                        style="display:none; background:transparent; border:1px solid #ef4444; color:#ef4444; padding:0.45rem 1.1rem; border-radius:8px; cursor:pointer; font-weight:600;">
-                        ⛔ Stop Scan
-                    </button>
-                {% endif %}
+            {% if not project.consent_granted %}
+            <form action="{{ url_for('dashboard.grant_consent', project_id=project.id) }}" method="POST">
+                <button type="submit">Grant Scanner Access</button>
+            </form>
+            {% else %}
+            <!-- Client can stop an active scan -->
+            <button id="stopScanBtn" onclick="stopScan()"
+                style="display:none; background:transparent; border:1px solid #ef4444; color:#ef4444; padding:0.45rem 1.1rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                ⛔ Stop Scan
+            </button>
+            {% endif %}
             {% elif current_user.role == 'admin' %}
-                {% if project.consent_granted %}
-                    <span style="font-size: 0.78rem; color: var(--color-muted); background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.3rem 0.75rem; border-radius: 6px;">🤖 Auto-fix runs after scan</span>
-                    
-                    <button id="toggleMonitorBtn" onclick="toggleMonitoring()" 
-                        style="background: {{ 'var(--color-primary)' if project.is_monitoring else 'transparent' }}; border: 1px solid var(--color-primary); color: {{ '#fff' if project.is_monitoring else 'var(--color-primary)' }}; padding:0.45rem 1.1rem; border-radius:8px; cursor:pointer; font-weight:600;">
-                        📡 {{ 'Disable' if project.is_monitoring else 'Enable' }} Monitoring
-                    </button>
+            {% if project.consent_granted %}
+            <span
+                style="font-size: 0.78rem; color: var(--color-muted); background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.3rem 0.75rem; border-radius: 6px;">🤖
+                Auto-fix runs after scan</span>
 
-                    <button id="stopScanBtn" onclick="stopScan()"
-                        style="display:none; background:transparent; border:1px solid #ef4444; color:#ef4444; padding:0.45rem 1.1rem; border-radius:8px; cursor:pointer; font-weight:600;">
-                        ⛔ Stop Scan
-                    </button>
-                    <button id="startScanBtn" onclick="startScan()">▶ Start Full Scan</button>
+            <button id="toggleMonitorBtn" onclick="toggleMonitoring()"
+                style="background: {{ 'var(--color-primary)' if project.is_monitoring else 'transparent' }}; border: 1px solid var(--color-primary); color: {{ '#fff' if project.is_monitoring else 'var(--color-primary)' }}; padding:0.45rem 1.1rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                📡 {{ 'Disable' if project.is_monitoring else 'Enable' }} Monitoring
+            </button>
 
-                    <!-- Red Team Simulator button -->
-                    <button id="openSimBtn" onclick="openSimPanel()"
-                        style="background: linear-gradient(135deg,#7c3aed,#dc2626); color:#fff; border:none; padding:0.45rem 1.25rem; border-radius:8px; cursor:pointer; font-weight:700; letter-spacing:0.03em; box-shadow: 0 4px 15px rgba(124,58,237,0.35);">
-                        🎯 Attack Simulator
-                    </button>
-                {% else %}
-                    <span class="badge critical" style="display: inline-flex; align-items: center;">Awaiting Client Consent</span>
-                {% endif %}
+            <button id="stopScanBtn" onclick="stopScan()"
+                style="display:none; background:transparent; border:1px solid #ef4444; color:#ef4444; padding:0.45rem 1.1rem; border-radius:8px; cursor:pointer; font-weight:600;">
+                ⛔ Stop Scan
+            </button>
+            <button id="startScanBtn" onclick="startScan()">▶ Start Full Scan</button>
+
+            <!-- Red Team Simulator button -->
+            <button id="openSimBtn" onclick="openSimPanel()"
+                style="background: linear-gradient(135deg,#7c3aed,#dc2626); color:#fff; border:none; padding:0.45rem 1.25rem; border-radius:8px; cursor:pointer; font-weight:700; letter-spacing:0.03em; box-shadow: 0 4px 15px rgba(124,58,237,0.35);">
+                🎯 Attack Simulator
+            </button>
+            {% else %}
+            <span class="badge critical" style="display: inline-flex; align-items: center;">Awaiting Client
+                Consent</span>
+            {% endif %}
             {% endif %}
         </div>
 
@@ -52,90 +58,114 @@
 
 
 <!-- Security Score Banner -->
-<div id="scoreBanner" class="card" style="margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; padding: 1.5rem 2rem; border-left: 6px solid var(--color-primary); transition: border-color 0.5s;">
+<div id="scoreBanner" class="card"
+    style="margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; padding: 1.5rem 2rem; border-left: 6px solid var(--color-primary); transition: border-color 0.5s;">
     <div>
-        <p style="color: var(--color-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">Security Trust Score</p>
+        <p
+            style="color: var(--color-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">
+            Security Trust Score</p>
         <div style="display: flex; align-items: baseline; gap: 0.75rem;">
-            <span id="scoreNumber" style="font-size: 3.5rem; font-weight: 800; line-height: 1; transition: all 0.6s ease;">100</span>
+            <span id="scoreNumber"
+                style="font-size: 3.5rem; font-weight: 800; line-height: 1; transition: all 0.6s ease;">100</span>
             <span style="font-size: 1.25rem; color: var(--color-muted);">/ 100</span>
-            <span id="scoreRating" style="font-size: 1.5rem; font-weight: 700; padding: 0.2rem 0.75rem; border-radius: 8px; background: #dcfce7; color: #16a34a; transition: all 0.6s ease;">A</span>
+            <span id="scoreRating"
+                style="font-size: 1.5rem; font-weight: 700; padding: 0.2rem 0.75rem; border-radius: 8px; background: #dcfce7; color: #16a34a; transition: all 0.6s ease;">A</span>
         </div>
     </div>
     <div style="text-align: right;">
-        <div id="scoreBar" style="width: 200px; height: 12px; background: #e2e8f0; border-radius: 99px; overflow: hidden;">
-            <div id="scoreBarFill" style="height: 100%; width: 100%; background: #22c55e; border-radius: 99px; transition: width 0.8s ease, background 0.8s ease;"></div>
+        <div id="scoreBar"
+            style="width: 200px; height: 12px; background: #e2e8f0; border-radius: 99px; overflow: hidden;">
+            <div id="scoreBarFill"
+                style="height: 100%; width: 100%; background: #22c55e; border-radius: 99px; transition: width 0.8s ease, background 0.8s ease;">
+            </div>
         </div>
-        <p id="scoreBreakdown" style="font-size: 0.75rem; color: var(--color-muted); margin-top: 0.5rem;">No vulnerabilities detected</p>
+        <p id="scoreBreakdown" style="font-size: 0.75rem; color: var(--color-muted); margin-top: 0.5rem;">No
+            vulnerabilities detected</p>
     </div>
 </div>
 
 
 <!-- ─── Upgrade to Premium Modal ────────────────────────────────────────────── -->
-<div id="upgradeModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(6px); z-index:300; align-items:center; justify-content:center;">
-  <div style="background:#fff; border-radius:20px; width:min(440px,92vw); padding:2.5rem; text-align:center; box-shadow:0 32px 64px rgba(0,0,0,0.15); position:relative;">
-    <div style="font-size:2.5rem; margin-bottom:1rem;">🔒</div>
-    <h2 style="font-size:1.3rem; margin-bottom:0.5rem; color:#0f172a;">Premium Feature</h2>
-    <p style="color:#64748b; font-size:0.9rem; margin-bottom:0.25rem;">
-      <strong id="upgradeFeatureName" style="color:#7c3aed;"></strong> is only available on the Premium plan.
-    </p>
-    <p style="color:#94a3b8; font-size:0.82rem; margin-bottom:2rem;">Upgrade to unlock AI explanations, code diffs, auto-fix, continuous monitoring, and the attack simulator.</p>
-    <div style="display:flex; gap:1rem; justify-content:center;">
-      <a href="{{ url_for('auth.choose_plan') }}"
-         style="display:inline-block; background:linear-gradient(135deg,#7c3aed,#2563eb); color:#fff; font-weight:700; font-size:0.9rem; padding:0.75rem 1.75rem; border-radius:12px; text-decoration:none; box-shadow:0 4px 16px rgba(124,58,237,0.35);">
-        🚀 Upgrade to Premium
-      </a>
-      <button onclick="closeUpgradeModal()" style="background:#f1f5f9; color:#64748b; border:none; padding:0.75rem 1.25rem; border-radius:12px; font-weight:600; cursor:pointer;">
-        Maybe later
-      </button>
+<div id="upgradeModal"
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(6px); z-index:300; align-items:center; justify-content:center;">
+    <div
+        style="background:#fff; border-radius:20px; width:min(440px,92vw); padding:2.5rem; text-align:center; box-shadow:0 32px 64px rgba(0,0,0,0.15); position:relative;">
+        <div style="font-size:2.5rem; margin-bottom:1rem;">🔒</div>
+        <h2 style="font-size:1.3rem; margin-bottom:0.5rem; color:#0f172a;">Premium Feature</h2>
+        <p style="color:#64748b; font-size:0.9rem; margin-bottom:0.25rem;">
+            <strong id="upgradeFeatureName" style="color:#7c3aed;"></strong> is only available on the Premium plan.
+        </p>
+        <p style="color:#94a3b8; font-size:0.82rem; margin-bottom:2rem;">Upgrade to unlock AI explanations, code diffs,
+            auto-fix, continuous monitoring, and the attack simulator.</p>
+        <div style="display:flex; gap:1rem; justify-content:center;">
+            <a href="{{ url_for('auth.choose_plan') }}"
+                style="display:inline-block; background:linear-gradient(135deg,#7c3aed,#2563eb); color:#fff; font-weight:700; font-size:0.9rem; padding:0.75rem 1.75rem; border-radius:12px; text-decoration:none; box-shadow:0 4px 16px rgba(124,58,237,0.35);">
+                🚀 Upgrade to Premium
+            </a>
+            <button onclick="closeUpgradeModal()"
+                style="background:#f1f5f9; color:#64748b; border:none; padding:0.75rem 1.25rem; border-radius:12px; font-weight:600; cursor:pointer;">
+                Maybe later
+            </button>
+        </div>
     </div>
-  </div>
 </div>
 
 <!-- ─── Attack Simulator Panel ─────────────────────────────────────────────── -->
-<div id="simOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(6px); z-index:200; align-items:center; justify-content:center;">
-  <div id="simPanel" style="background:#0f172a; border:1px solid #7c3aed; border-radius:16px; width:min(700px,95vw); max-height:88vh; overflow-y:auto; box-shadow:0 24px 60px rgba(124,58,237,0.4); padding:2rem; position:relative;">
+<div id="simOverlay"
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(6px); z-index:200; align-items:center; justify-content:center;">
+    <div id="simPanel"
+        style="background:#0f172a; border:1px solid #7c3aed; border-radius:16px; width:min(700px,95vw); max-height:88vh; overflow-y:auto; box-shadow:0 24px 60px rgba(124,58,237,0.4); padding:2rem; position:relative;">
 
-    <!-- Header -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-      <div>
-        <h2 style="color:#f8fafc; font-size:1.4rem; margin:0;">🎯 Red Team Attack Simulator</h2>
-        <p style="color:#64748b; font-size:0.85rem; margin:0.35rem 0 0;">Select attacks to fire against the demo target. Results stream live to the Transparency Log.</p>
-      </div>
-      <button onclick="closeSimPanel()" style="background:transparent; border:none; color:#64748b; font-size:1.5rem; cursor:pointer; line-height:1;">✕</button>
-    </div>
+        <!-- Header -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+            <div>
+                <h2 style="color:#f8fafc; font-size:1.4rem; margin:0;">🎯 Red Team Attack Simulator</h2>
+                <p style="color:#64748b; font-size:0.85rem; margin:0.35rem 0 0;">Select attacks to fire against the demo
+                    target. Results stream live to the Transparency Log.</p>
+            </div>
+            <button onclick="closeSimPanel()"
+                style="background:transparent; border:none; color:#64748b; font-size:1.5rem; cursor:pointer; line-height:1;">✕</button>
+        </div>
 
-    <!-- Attack selection grid -->
-    <div id="attackList" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1.5rem;"></div>
+        <!-- Attack selection grid -->
+        <div id="attackList" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1.5rem;">
+        </div>
 
-    <!-- Progress bar (shows during run) -->
-    <div id="simProgressWrap" style="display:none; margin-bottom:1.25rem;">
-      <div style="display:flex; justify-content:space-between; margin-bottom:0.35rem;">
-        <span style="color:#a78bfa; font-size:0.8rem; font-weight:600;">SIMULATION IN PROGRESS</span>
-        <span id="simProgressLabel" style="color:#64748b; font-size:0.8rem;">Firing payloads...</span>
-      </div>
-      <div style="background:#1e293b; border-radius:99px; height:8px; overflow:hidden;">
-        <div id="simProgressBar" style="height:100%; width:0%; background:linear-gradient(90deg,#7c3aed,#dc2626); border-radius:99px; transition:width 0.6s ease;"></div>
-      </div>
-    </div>
+        <!-- Progress bar (shows during run) -->
+        <div id="simProgressWrap" style="display:none; margin-bottom:1.25rem;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:0.35rem;">
+                <span style="color:#a78bfa; font-size:0.8rem; font-weight:600;">SIMULATION IN PROGRESS</span>
+                <span id="simProgressLabel" style="color:#64748b; font-size:0.8rem;">Firing payloads...</span>
+            </div>
+            <div style="background:#1e293b; border-radius:99px; height:8px; overflow:hidden;">
+                <div id="simProgressBar"
+                    style="height:100%; width:0%; background:linear-gradient(90deg,#7c3aed,#dc2626); border-radius:99px; transition:width 0.6s ease;">
+                </div>
+            </div>
+        </div>
 
-    <!-- Live mini-log feed inside panel -->
-    <div id="simMiniLog" style="background:#0a0f1e; border:1px solid #1e293b; border-radius:10px; padding:1rem; height:180px; overflow-y:auto; font-family:'Courier New',monospace; font-size:0.75rem; margin-bottom:1.5rem; display:none;"></div>
+        <!-- Live mini-log feed inside panel -->
+        <div id="simMiniLog"
+            style="background:#0a0f1e; border:1px solid #1e293b; border-radius:10px; padding:1rem; height:180px; overflow-y:auto; font-family:'Courier New',monospace; font-size:0.75rem; margin-bottom:1.5rem; display:none;">
+        </div>
 
-    <!-- Action buttons -->
-    <div style="display:flex; gap:1rem; align-items:center;">
-      <button id="launchSimBtn" onclick="launchSimulation()"
-        style="flex:1; background:linear-gradient(135deg,#7c3aed,#dc2626); color:#fff; border:none; padding:0.75rem; border-radius:10px; cursor:pointer; font-weight:700; font-size:1rem; letter-spacing:0.03em; transition:opacity 0.2s;">
-        🚀 Launch Simulation
-      </button>
-      <button id="stopSimBtn" onclick="stopSimulation()" style="display:none;
+        <!-- Action buttons -->
+        <div style="display:flex; gap:1rem; align-items:center;">
+            <button id="launchSimBtn" onclick="launchSimulation()"
+                style="flex:1; background:linear-gradient(135deg,#7c3aed,#dc2626); color:#fff; border:none; padding:0.75rem; border-radius:10px; cursor:pointer; font-weight:700; font-size:1rem; letter-spacing:0.03em; transition:opacity 0.2s;">
+                🚀 Launch Simulation
+            </button>
+            <button id="stopSimBtn" onclick="stopSimulation()"
+                style="display:none;
         background:transparent; border:1px solid #ef4444; color:#ef4444; padding:0.75rem 1.25rem; border-radius:10px; cursor:pointer; font-weight:600;">
-        ⛔ Stop
-      </button>
-      <label style="color:#64748b; font-size:0.82rem; cursor:pointer; white-space:nowrap;">
-        <input type="checkbox" id="selectAllChk" checked onchange="toggleSelectAll(this.checked)" style="margin-right:0.3rem;">All attacks
-      </label>
+                ⛔ Stop
+            </button>
+            <label style="color:#64748b; font-size:0.82rem; cursor:pointer; white-space:nowrap;">
+                <input type="checkbox" id="selectAllChk" checked onchange="toggleSelectAll(this.checked)"
+                    style="margin-right:0.3rem;">All attacks
+            </label>
+        </div>
     </div>
-  </div>
 </div>
 
 <div class="grid" style="grid-template-columns: 2fr 1fr;">
@@ -144,38 +174,50 @@
         <h2 class="section-title">Vulnerability Report</h2>
         <div id="scannedVulns" class="vuln-list" style="flex: 1; margin-top: 1rem;">
             {% if not vulns %}
-                <div style="text-align: center; padding: 3rem; color: var(--color-muted);">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
-                    <p>No vulnerabilities detected yet. Run a scan to populate.</p>
-                </div>
+            <div style="text-align: center; padding: 3rem; color: var(--color-muted);">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
+                <p>No vulnerabilities detected yet. Run a scan to populate.</p>
+            </div>
             {% else %}
-                {% for v in vulns %}
-                <div class="vuln-item {{ 'fixed' if v.is_fixed else '' }}">
-                    <div class="vuln-header">
-                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                            <strong>{{ v.vuln_type }}</strong>
-                            <code style="font-size: 0.8rem; background: #f1f5f9; padding: 0.1rem 0.4rem; border-radius: 4px;">{{ v.endpoint }}</code>
-                        </div>
-                        <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <span class="badge {{ 'critical' if (v.severity or 'Medium') == 'High' else ('warning' if (v.severity or 'Medium') == 'Medium' else 'info') }}">{{ v.severity or 'Medium' }}</span>
-                            <span class="badge {{ 'safe' if v.is_fixed else 'critical' }}">{{ 'Fixed' if v.is_fixed else 'Open' }}</span>
-                        </div>
+            {% for v in vulns %}
+            <div class="vuln-item {{ 'fixed' if v.is_fixed else '' }}">
+                <div class="vuln-header">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                        <strong>{{ v.vuln_type }}</strong>
+                        <code
+                            style="font-size: 0.8rem; background: #f1f5f9; padding: 0.1rem 0.4rem; border-radius: 4px;">{{ v.endpoint }}</code>
                     </div>
-                    <p style="font-size: 0.9rem; margin-bottom: 0.75rem; color: var(--color-muted);">{{ v.description }}</p>
-                    
-                    <div style="background: #eff6ff; padding: 0.75rem; border-radius: 8px; border-left: 3px solid var(--color-primary); margin-top: 0.5rem;">
-                        <span style="font-weight: 600; font-size: 0.8rem; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.05em;">🧠 AI Explanation</span>
-                        <p style="font-size: 0.875rem; margin-top: 0.35rem; color: var(--color-text); line-height: 1.6;">{{ v.ai_explanation }}</p>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span
+                            class="badge {{ 'critical' if (v.severity or 'Medium') == 'High' else ('warning' if (v.severity or 'Medium') == 'Medium' else 'info') }}">{{
+                            v.severity or 'Medium' }}</span>
+                        <span class="badge {{ 'safe' if v.is_fixed else 'critical' }}">{{ 'Fixed' if v.is_fixed else
+                            'Open' }}</span>
                     </div>
-
-                    {% if current_user.role == 'admin' %}
-                    <div style="background: #f0fdf4; padding: 0.75rem; border-radius: 8px; margin-top: 0.75rem; border: 1px solid #bbf7d0;">
-                        <span style="font-weight: 600; font-size: 0.8rem; color: var(--color-success); text-transform: uppercase; letter-spacing: 0.05em;">🛠 Fix Recommendation</span>
-                        <p style="font-size: 0.875rem; margin-top: 0.35rem; color: var(--color-text); line-height: 1.6;">{{ v.fix_suggestion }}</p>
-                    </div>
-                    {% endif %}
                 </div>
-                {% endfor %}
+                <p style="font-size: 0.9rem; margin-bottom: 0.75rem; color: var(--color-muted);">{{ v.description }}</p>
+
+                <div
+                    style="background: #eff6ff; padding: 0.75rem; border-radius: 8px; border-left: 3px solid var(--color-primary); margin-top: 0.5rem;">
+                    <span
+                        style="font-weight: 600; font-size: 0.8rem; color: var(--color-primary); text-transform: uppercase; letter-spacing: 0.05em;">🧠
+                        AI Explanation</span>
+                    <p style="font-size: 0.875rem; margin-top: 0.35rem; color: var(--color-text); line-height: 1.6;">{{
+                        v.ai_explanation }}</p>
+                </div>
+
+                {% if current_user.role == 'admin' %}
+                <div
+                    style="background: #f0fdf4; padding: 0.75rem; border-radius: 8px; margin-top: 0.75rem; border: 1px solid #bbf7d0;">
+                    <span
+                        style="font-weight: 600; font-size: 0.8rem; color: var(--color-success); text-transform: uppercase; letter-spacing: 0.05em;">🛠
+                        Fix Recommendation</span>
+                    <p style="font-size: 0.875rem; margin-top: 0.35rem; color: var(--color-text); line-height: 1.6;">{{
+                        v.fix_suggestion }}</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
             {% endif %}
         </div>
     </div>
@@ -187,7 +229,9 @@
             {% for log in logs %}
             <div class="log-item">
                 <span class="log-time">[{{ log.timestamp.strftime('%H:%M:%S') }}]</span>
-                <span style="color: {% if 'SCAN' in log.action_type %}var(--color-primary){% elif 'VULN' in log.action_type %}var(--color-error){% elif 'FIX' in log.action_type %}var(--color-success){% else %}var(--color-accent){% endif %}; font-weight: 600;">[{{ log.action_type }}]</span>
+                <span
+                    style="color: {% if 'SCAN' in log.action_type %}var(--color-primary){% elif 'VULN' in log.action_type %}var(--color-error){% elif 'FIX' in log.action_type %}var(--color-success){% else %}var(--color-accent){% endif %}; font-weight: 600;">[{{
+                    log.action_type }}]</span>
                 <span>{{ log.detail }}</span>
             </div>
             {% endfor %}
@@ -197,8 +241,8 @@
 
 <script>
     const projectId = '{{ project.id }}';
-    const isAdmin   = {{ 'true' if current_user.role == 'admin' else 'false' }};
-    const userPlan  = '{{ current_user.plan }}';
+    const isAdmin = {{ 'true' if current_user.role == 'admin' else 'false' }};
+    const userPlan = '{{ current_user.plan }}';
     const isPremium = (userPlan === 'premium');
 
     // ── Upgrade modal helpers ────────────────────────────────────────────
@@ -226,22 +270,22 @@
 
     async function startScan() {
         const startBtn = document.getElementById('startScanBtn');
-        const stopBtn  = document.getElementById('stopScanBtn');
+        const stopBtn = document.getElementById('stopScanBtn');
 
         if (startBtn) { startBtn.disabled = true; startBtn.innerHTML = '<span class="scanning-indicator"></span> Scanning...'; }
-        if (stopBtn)  { stopBtn.style.display = 'inline-flex'; }
+        if (stopBtn) { stopBtn.style.display = 'inline-flex'; }
 
         try {
             const res = await fetch(`/api/project/${projectId}/scan`, { method: 'POST' });
             if (!res.ok) {
                 const data = await res.json();
                 if (startBtn) { startBtn.innerHTML = '✗ ' + (data.error || 'Failed'); startBtn.disabled = false; }
-                if (stopBtn)  { stopBtn.style.display = 'none'; }
+                if (stopBtn) { stopBtn.style.display = 'none'; }
                 return;
             }
-        } catch(e) {
+        } catch (e) {
             if (startBtn) { startBtn.innerHTML = '✗ Network Error'; startBtn.disabled = false; }
-            if (stopBtn)  { stopBtn.style.display = 'none'; }
+            if (stopBtn) { stopBtn.style.display = 'none'; }
             return;
         }
 
@@ -259,30 +303,30 @@
                 } else if (status === 'stopped') {
                     clearInterval(statusInterval);
                     if (startBtn) { startBtn.innerHTML = '⛔ Scan Stopped'; startBtn.disabled = false; }
-                    if (stopBtn)  { stopBtn.style.display = 'none'; }
+                    if (stopBtn) { stopBtn.style.display = 'none'; }
                     setTimeout(() => { if (startBtn) startBtn.innerHTML = '▶ Start Full Scan'; }, 3000);
                     await refreshData();
                 } else if (status === 'done' || status === 'idle') {
                     clearInterval(statusInterval);
                     if (startBtn) { startBtn.innerHTML = '✓ Scan & Fix Complete'; startBtn.disabled = false; }
-                    if (stopBtn)  { stopBtn.style.display = 'none'; }
+                    if (stopBtn) { stopBtn.style.display = 'none'; }
                     setTimeout(() => { if (startBtn) startBtn.innerHTML = '▶ Start Full Scan'; }, 3000);
                     await refreshData();
                 }
-            } catch(e) { /* keep polling */ }
+            } catch (e) { /* keep polling */ }
         }, 2000);
     }
 
     async function stopScan() {
-        const stopBtn  = document.getElementById('stopScanBtn');
+        const stopBtn = document.getElementById('stopScanBtn');
         const startBtn = document.getElementById('startScanBtn');
         if (stopBtn) { stopBtn.disabled = true; stopBtn.innerHTML = 'Stopping...'; }
 
         try {
             await fetch(`/api/project/${projectId}/scan/stop`, { method: 'POST' });
-        } catch(e) {}
+        } catch (e) { }
 
-        if (stopBtn)  { stopBtn.style.display = 'none'; stopBtn.disabled = false; stopBtn.innerHTML = '⛔ Stop Scan'; }
+        if (stopBtn) { stopBtn.style.display = 'none'; stopBtn.disabled = false; stopBtn.innerHTML = '⛔ Stop Scan'; }
         if (startBtn) { startBtn.innerHTML = '⛔ Stopped'; }
         await refreshData();
         setTimeout(() => { if (startBtn) { startBtn.innerHTML = '▶ Start Full Scan'; startBtn.disabled = false; } }, 2500);
@@ -310,7 +354,7 @@
             } else {
                 btn.innerHTML = '✗ Error';
             }
-        } catch(e) {}
+        } catch (e) { }
         btn.disabled = false;
         await refreshData();
     }
@@ -354,8 +398,8 @@
 
         const open = vulns.filter(v => !v.is_fixed);
         const high = open.filter(v => v.severity === 'High').length;
-        const med  = open.filter(v => v.severity === 'Medium').length;
-        const low  = open.filter(v => v.severity === 'Low').length;
+        const med = open.filter(v => v.severity === 'Medium').length;
+        const low = open.filter(v => v.severity === 'Low').length;
         if (!hasPremium) {
             scoreBreakdown.innerHTML = `${open.length} open vulnerabilities &nbsp;<button onclick="showUpgradeModal('Score Breakdown')" style="font-size:0.7rem;padding:0.2rem 0.6rem;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;border-radius:6px;cursor:pointer;">🔒 Full Breakdown — Premium</button>`;
         } else if (open.length === 0) {
@@ -366,7 +410,7 @@
     }
 
     function escapeHtml(str) {
-        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
     function buildDiffHtml(before, after) {
@@ -449,10 +493,10 @@
             vulnContainer.innerHTML = '';
             vulns.forEach(v => {
                 const badgeClass = v.is_fixed ? 'safe' : 'critical';
-                const badgeText  = v.is_fixed ? '✅ Fixed' : '🔴 Open';
+                const badgeText = v.is_fixed ? '✅ Fixed' : '🔴 Open';
                 const fixedClass = v.is_fixed ? 'fixed' : '';
-                const sev        = v.severity || 'Medium';
-                const sevClass   = sev === 'High' ? 'critical' : (sev === 'Medium' ? 'warning' : 'info');
+                const sev = v.severity || 'Medium';
+                const sevClass = sev === 'High' ? 'critical' : (sev === 'Medium' ? 'warning' : 'info');
 
                 // 🔒 AI Explanation — premium only
                 const aiHtml = isPremium
@@ -469,6 +513,14 @@
 
                 const fixedTimeHtml = v.is_fixed && v.fixed_at
                     ? `<p style="font-size:0.75rem;color:#10b981;margin-top:0.5rem;">⏱ Patched at ${v.fixed_at}</p>`
+                    : '';
+                
+                // Resolution summary box
+                const resolutionHtml = v.is_fixed && v.resolution_summary
+                    ? `<div style="background:#f0fdf4;padding:0.75rem;border-radius:8px;border-left:3px solid #10b981;margin-top:0.75rem;">
+                        <span style="font-weight:600;font-size:0.8rem;color:#10b981;text-transform:uppercase;letter-spacing:0.05em;">✅ Resolution Summary</span>
+                        <p style="font-size:0.875rem;margin-top:0.35rem;color:var(--color-text);line-height:1.6;font-style:italic;">${v.resolution_summary}</p>
+                       </div>`
                     : '';
 
                 // 🔒 Fix recommendation — admin + premium only
@@ -497,6 +549,7 @@
                     <p style="font-size:0.9rem;margin-bottom:0.75rem;color:var(--color-muted);">${v.description}</p>
                     ${aiHtml}
                     ${adminHtml}
+                    ${resolutionHtml}
                     ${diffHtml}
                     ${fixedTimeHtml}
                 </div>`;
@@ -506,12 +559,12 @@
 
     // ── Attack Simulator ──────────────────────────────────────────────────
     const ATTACKS_META = [
-        { id:'sqli_bypass',   name:'SQL Injection — Auth Bypass',        type:'SQL Injection',      severity:'High',   color:'#ef4444' },
-        { id:'sqli_dump',     name:'SQL Injection — Data Dump',           type:'SQL Injection',      severity:'High',   color:'#ef4444' },
-        { id:'xss_reflected', name:'XSS — Reflected Script Injection',    type:'XSS Vulnerability',  severity:'Medium', color:'#f59e0b' },
-        { id:'xss_script',    name:'XSS — Script Tag Popup',             type:'XSS Vulnerability',  severity:'Medium', color:'#f59e0b' },
-        { id:'brute_force',   name:'Brute Force — Credential Guessing',   type:'Weak Auth',          severity:'Medium', color:'#f59e0b' },
-        { id:'csrf_probe',    name:'CSRF — Forged Request Probe',         type:'Weak Auth',          severity:'Medium', color:'#f59e0b' },
+        { id: 'sqli_bypass', name: 'SQL Injection — Auth Bypass', type: 'SQL Injection', severity: 'High', color: '#ef4444' },
+        { id: 'sqli_dump', name: 'SQL Injection — Data Dump', type: 'SQL Injection', severity: 'High', color: '#ef4444' },
+        { id: 'xss_reflected', name: 'XSS — Reflected Script Injection', type: 'XSS Vulnerability', severity: 'Medium', color: '#f59e0b' },
+        { id: 'xss_script', name: 'XSS — Script Tag Popup', type: 'XSS Vulnerability', severity: 'Medium', color: '#f59e0b' },
+        { id: 'brute_force', name: 'Brute Force — Credential Guessing', type: 'Weak Auth', severity: 'Medium', color: '#f59e0b' },
+        { id: 'csrf_probe', name: 'CSRF — Forged Request Probe', type: 'Weak Auth', severity: 'Medium', color: '#f59e0b' },
     ];
 
     let simPollInterval = null;
@@ -577,7 +630,7 @@
         try {
             const res = await fetch(`/api/project/${projectId}/simulate`, {
                 method: 'POST',
-                headers: {'Content-Type':'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ attack_ids: selected, base_url: window.location.origin })
             });
             if (!res.ok) {
@@ -586,7 +639,7 @@
                 btn.disabled = false; stopBtn.style.display = 'none';
                 return;
             }
-        } catch(e) {
+        } catch (e) {
             btn.innerHTML = '✗ Network Error'; btn.disabled = false; stopBtn.style.display = 'none';
             return;
         }
@@ -612,7 +665,7 @@
                     return `<div style="color:${color}; margin-bottom:0.2rem;">[${l.timestamp.split(' ')[1]}] ${l.detail}</div>`;
                 }).join('');
                 mini.scrollTop = mini.scrollHeight;
-            } catch(e) {}
+            } catch (e) { }
 
             // Check sim status
             try {
@@ -629,12 +682,12 @@
                     document.getElementById('selectAllChk').disabled = false;
                     await refreshData(); // update vuln list + score
                 }
-            } catch(e) {}
+            } catch (e) { }
         }, 1800);
     }
 
     async function stopSimulation() {
-        try { await fetch(`/api/project/${projectId}/simulate/stop`, { method:'POST' }); } catch(e) {}
+        try { await fetch(`/api/project/${projectId}/simulate/stop`, { method: 'POST' }); } catch (e) { }
         if (simPollInterval) { clearInterval(simPollInterval); simPollInterval = null; }
         const btn = document.getElementById('launchSimBtn');
         btn.innerHTML = '⛔ Stopped'; btn.disabled = false;

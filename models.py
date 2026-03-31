@@ -56,6 +56,7 @@ class Vulnerability(db.Model):
     description = db.Column(db.Text)
     ai_explanation = db.Column(db.Text)
     fix_suggestion = db.Column(db.Text)
+    resolution_summary = db.Column(db.Text, nullable=True)
     is_fixed = db.Column(db.Boolean, default=False)
     mock_before_code = db.Column(db.Text, nullable=True)
     mock_after_code = db.Column(db.Text, nullable=True)
