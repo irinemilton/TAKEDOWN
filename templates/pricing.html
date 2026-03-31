@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+  .pricing-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 5rem;
+    text-align: center;
+  }
+
+  .pricing-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(37,99,235,0.1));
+    border: 1px solid rgba(124,58,237,0.25);
+    color: #7c3aed;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.4rem 1rem;
+    border-radius: 99px;
+    margin-bottom: 1.5rem;
+  }
+
+  .pricing-title {
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 900;
+    color: #0f172a;
+    letter-spacing: -0.04em;
+    line-height: 1.15;
+    margin-bottom: 1rem;
+  }
+
+  .pricing-title span {
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .pricing-subtitle {
+    color: #64748b;
+    font-size: 1.05rem;
+    margin-bottom: 3.5rem;
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: stretch;
+    text-align: left;
+  }
+
+  @media (max-width: 640px) {
+    .pricing-grid { grid-template-columns: 1fr; }
+  }
+
+  .plan-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 2.25rem;
+    position: relative;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    cursor: default;
+  }
+
+  .plan-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 24px 48px rgba(0,0,0,0.08);
+  }
+
+  .plan-card.premium {
+    border-color: #7c3aed;
+    background: linear-gradient(160deg, #faf5ff 0%, #eff6ff 100%);
+    box-shadow: 0 0 0 1px rgba(124,58,237,0.15), 0 8px 32px rgba(124,58,237,0.12);
+  }
+
+  .plan-card.premium:hover {
+    box-shadow: 0 0 0 1px rgba(124,58,237,0.3), 0 24px 64px rgba(124,58,237,0.2);
+  }
+
+  /* Animated glow ring on premium */
+  .plan-card.premium::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, #7c3aed, #2563eb, #7c3aed);
+    background-size: 200% 200%;
+    z-index: -1;
+    animation: gradientShift 3s ease infinite;
+    opacity: 0.6;
+  }
+
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .popular-badge {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.3rem 1.1rem;
+    border-radius: 99px;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(124,58,237,0.35);
+  }
+
+  .plan-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .plan-icon.basic { background: #f1f5f9; }
+  .plan-icon.prem  { background: linear-gradient(135deg, #7c3aed22, #2563eb22); }
+
+  .plan-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.25rem;
+  }
+
+  .plan-price {
+    font-size: 2.75rem;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    margin-bottom: 0.25rem;
+  }
+
+  .plan-price.premium-price {
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .plan-price-sub {
+    font-size: 0.82rem;
+    color: #94a3b8;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+  }
+
+  .plan-desc {
+    font-size: 0.88rem;
+    color: #64748b;
+    line-height: 1.6;
+    margin-bottom: 1.75rem;
+    min-height: 52px;
+  }
+
+  .feature-list {
+    list-style: none;
+    margin-bottom: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .feature-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    font-size: 0.88rem;
+    color: #334155;
+    line-height: 1.45;
+  }
+
+  .feature-list li .fi {
+    flex-shrink: 0;
+    margin-top: 1px;
+    font-size: 0.95rem;
+  }
+
+  .feature-list li.locked {
+    color: #94a3b8;
+  }
+
+  .plan-divider {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 1.25rem 0;
+  }
+
+  .choose-btn {
+    width: 100%;
+    padding: 0.9rem;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    border: none;
+  }
+
+  .choose-btn.basic-btn {
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1.5px solid #e2e8f0;
+  }
+
+  .choose-btn.basic-btn:hover {
+    background: #e2e8f0;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+  }
+
+  .choose-btn.premium-btn {
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(124,58,237,0.35);
+  }
+
+  .choose-btn.premium-btn:hover {
+    box-shadow: 0 8px 28px rgba(124,58,237,0.5);
+    transform: translateY(-2px);
+    opacity: 0.95;
+  }
+
+  .plan-tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.15rem 0.55rem;
+    border-radius: 99px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    vertical-align: middle;
+    margin-left: 0.3rem;
+  }
+
+  .plan-tag.free-tag { background: #f1f5f9; color: #64748b; }
+  .plan-tag.prem-tag { background: rgba(124,58,237,0.12); color: #7c3aed; }
+</style>
+
+<div class="pricing-wrap">
+  <div class="pricing-eyebrow">⚡ Welcome, {{ current_user.username }}</div>
+
+  <h1 class="pricing-title">
+    Choose your<br><span>Security Plan</span>
+  </h1>
+  <p class="pricing-subtitle">
+    Start scanning for free or unlock the full AI-powered security suite. No credit card required for this demo.
+  </p>
+
+  <div class="pricing-grid">
+
+    <!-- ── Basic Plan ── -->
+    <div class="plan-card basic">
+      <div class="plan-icon basic">🛡️</div>
+      <div class="plan-name">Basic <span class="plan-tag free-tag">Free</span></div>
+      <div class="plan-price">$0</div>
+      <div class="plan-price-sub">forever free</div>
+      <p class="plan-desc">Ideal for developers getting started. Run static code scans and view your vulnerability report.</p>
+
+      <ul class="feature-list">
+        <li><span class="fi">✅</span> SAST code scanning (1 project)</li>
+        <li><span class="fi">✅</span> Vulnerability detection report</li>
+        <li><span class="fi">✅</span> Security score (number only)</li>
+        <li class="locked"><span class="fi">🔒</span> AI-powered explanations</li>
+        <li class="locked"><span class="fi">🔒</span> Code diff viewer (Before / After)</li>
+        <li class="locked"><span class="fi">🔒</span> Auto-Fix engine</li>
+        <li class="locked"><span class="fi">🔒</span> Continuous monitoring</li>
+        {% if current_user.role == 'admin' %}
+        <li class="locked"><span class="fi">🔒</span> Attack Simulator</li>
+        {% endif %}
+      </ul>
+
+      <form action="{{ url_for('auth.choose_plan') }}" method="POST">
+        <input type="hidden" name="plan" value="free">
+        <button type="submit" class="choose-btn basic-btn">Continue with Basic</button>
+      </form>
+    </div>
+
+    <!-- ── Premium Plan ── -->
+    <div class="plan-card premium">
+      <div class="popular-badge">✨ Recommended</div>
+      <div class="plan-icon prem">🚀</div>
+      <div class="plan-name">Premium <span class="plan-tag prem-tag">Full Access</span></div>
+      <div class="plan-price premium-price">$29</div>
+      <div class="plan-price-sub">/ month — free in this demo</div>
+      <p class="plan-desc">The complete AI security suite. Automated fixes, live monitoring, and red-team simulations all included.</p>
+
+      <ul class="feature-list">
+        <li><span class="fi">✅</span> Unlimited SAST scanning projects</li>
+        <li><span class="fi">✅</span> Vulnerability detection report</li>
+        <li><span class="fi">✅</span> Full Security score with breakdown</li>
+        <li><span class="fi">✅</span> <strong>AI-powered explanations (Gemini)</strong></li>
+        <li><span class="fi">✅</span> <strong>Code diff viewer (Before / After)</strong></li>
+        <li><span class="fi">✅</span> <strong>Auto-Fix engine + patch history</strong></li>
+        <li><span class="fi">✅</span> <strong>Continuous real-time monitoring</strong></li>
+        {% if current_user.role == 'admin' %}
+        <li><span class="fi">✅</span> <strong>🎯 Attack Simulator (red-team)</strong></li>
+        {% endif %}
+      </ul>
+
+      <form action="{{ url_for('auth.choose_plan') }}" method="POST">
+        <input type="hidden" name="plan" value="premium">
+        <button type="submit" class="choose-btn premium-btn">🚀 Activate Premium — Free Demo</button>
+      </form>
+    </div>
+
+  </div>
+
+  <p style="margin-top: 2rem; font-size: 0.82rem; color: #94a3b8;">
+    You can change your plan at any time from your account settings.
+  </p>
+</div>
+{% endblock %}

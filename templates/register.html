@@ -1,28 +1,41 @@
 {% extends "base.html" %}
 {% block content %}
-<div style="max-width: 400px; margin: 4rem auto;">
+<div style="max-width: 420px; margin: 4rem auto;">
     <div class="card">
-        <h2>Demo Setup / Register</h2>
-        <p style="color: var(--color-muted); margin-bottom: 2rem;">For Hackathon demo purposes, pick your role.</p>
+        <h2 style="margin-bottom: 0.25rem;">Create your account</h2>
+        <p style="color: var(--color-muted); margin-bottom: 2rem; font-size: 0.9rem;">
+            You'll choose your security plan on the next step.
+        </p>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <div class="flash-messages">
+              {% for m in messages %}
+                <div class="alert">{{ m }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
         <form action="{{ url_for('auth.register') }}" method="POST">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="email" name="email" placeholder="Email" required>
-            <input type="password" name="password" placeholder="Password" required>
-            
-            <label style="color: var(--color-muted)">Role:</label>
+            <input type="text"     name="username" placeholder="Username"       required>
+            <input type="email"    name="email"    placeholder="Email address"  required>
+            <input type="password" name="password" placeholder="Password"       required>
+
+            <label style="color: var(--color-muted); font-size: 0.85rem; font-weight: 600; margin-bottom: -0.5rem;">I am a:</label>
             <select name="role">
-                <option value="client">Client (Website Owner)</option>
-                <option value="admin">Admin (Security Provider)</option>
+                <option value="client">Client — Website / App Owner</option>
+                <option value="admin">Admin — Security Provider</option>
             </select>
-            
-            <label style="color: var(--color-muted)">Plan:</label>
-            <select name="plan">
-                <option value="free">Free (Scan Only)</option>
-                <option value="premium">Premium (AI Auto-Fix Included)</option>
-            </select>
-            
-            <button type="submit">Create Account</button>
+
+            <button type="submit" style="margin-top: 0.5rem;">
+                Create Account →
+            </button>
         </form>
+
+        <p style="text-align:center; margin-top: 1.5rem; font-size: 0.85rem; color: var(--color-muted);">
+            Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a>
+        </p>
     </div>
 </div>
 {% endblock %}

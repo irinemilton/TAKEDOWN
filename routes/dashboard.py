@@ -3,6 +3,13 @@ from flask_login import login_required, current_user
 from models import User, Project, Log, Vulnerability
 from extensions import db
 import uuid
+import threading
+
+# ── Scan state tracking (in-memory, per project) ────────────────────────────
+# Maps project_id -> True when a stop has been requested
+SCAN_STOP_FLAGS  = {}
+# Maps project_id -> 'idle' | 'scanning' | 'fixing' | 'done' | 'stopped'
+SCAN_STATUS      = {}
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -115,6 +122,7 @@ def get_vulns(project_id):
     return jsonify({
         'score': score,
         'rating': rating,
+        'plan': project.client.plan if project.client else 'free',
         'vulns': [
             {
                 'id': v.id,
@@ -124,30 +132,86 @@ def get_vulns(project_id):
                 'description': v.description,
                 'fix_suggestion': v.fix_suggestion,
                 'is_fixed': v.is_fixed,
-                'ai_explanation': v.ai_explanation
+                'ai_explanation': v.ai_explanation,
+                'mock_before_code': v.mock_before_code or '',
+                'mock_after_code': v.mock_after_code or '',
+                'fixed_at': v.fixed_at.strftime('%Y-%m-%d %H:%M:%S') if v.fixed_at else None,
             }
             for v in vulns
         ]
     })
+
 
 @dashboard_bp.route('/api/project/<project_id>/scan', methods=['POST'])
 @login_required
 def start_scan(project_id):
     if current_user.role != 'admin':
         return jsonify({"error": "Only admins can trigger scans"}), 403
-    
-    # Run the scan synchronously for hackathon simplicity (or handle in thread)
+
+    if SCAN_STATUS.get(project_id) == 'scanning':
+        return jsonify({"error": "Scan already in progress"}), 409
+
+    # Clear any previous stop flag and mark as scanning
+    SCAN_STOP_FLAGS[project_id] = False
+    SCAN_STATUS[project_id] = 'scanning'
+
     from scanner.core import run_scan
-    success = run_scan(project_id)
-    if success:
-        return jsonify({"status": "Scan completed."})
-    return jsonify({"error": "Scan failed or not consented"}), 400
+    from flask import current_app
+
+    app = current_app._get_current_object()
+
+    def _scan_thread():
+        with app.app_context():
+            try:
+                run_scan(project_id, stop_flags=SCAN_STOP_FLAGS, scan_status=SCAN_STATUS)
+            finally:
+                # Ensure status is cleaned up even on crash
+                if SCAN_STATUS.get(project_id) not in ('stopped',):
+                    SCAN_STATUS[project_id] = 'done'
+
+    t = threading.Thread(target=_scan_thread, daemon=True)
+    t.start()
+    return jsonify({"status": "Scan started in background."})
+
+
+@dashboard_bp.route('/api/project/<project_id>/scan/stop', methods=['POST'])
+@login_required
+def stop_scan(project_id):
+    """Admin OR the project's client can stop an active scan."""
+    project = Project.query.get_or_404(project_id)
+    is_owner = (current_user.role == 'admin' or project.client_id == current_user.id)
+    if not is_owner:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    if SCAN_STATUS.get(project_id) != 'scanning':
+        return jsonify({"error": "No active scan to stop"}), 400
+
+    SCAN_STOP_FLAGS[project_id] = True
+    SCAN_STATUS[project_id] = 'stopped'
+
+    log = Log(project_id=project_id, action_type='SCAN_STOPPED',
+              detail=f'⛔ Scan manually stopped by {current_user.username}.')
+    db.session.add(log)
+    db.session.commit()
+    return jsonify({"status": "Scan stop requested."})
+
+
+@dashboard_bp.route('/api/project/<project_id>/scan/status')
+@login_required
+def scan_status(project_id):
+    """Returns the current scan state for real-time UI updates."""
+    project = Project.query.get_or_404(project_id)
+    is_owner = (current_user.role == 'admin' or project.client_id == current_user.id)
+    if not is_owner:
+        return jsonify({"error": "Unauthorized"}), 403
+    status = SCAN_STATUS.get(project_id, 'idle')
+    return jsonify({"status": status})
 
 @dashboard_bp.route('/api/project/<project_id>/fix', methods=['POST'])
 @login_required
 def trigger_fix(project_id):
-    if current_user.role != 'admin' or current_user.plan != 'premium':
-        return jsonify({"error": "Only premium admins can auto-fix"}), 403
+    if current_user.role != 'admin':
+        return jsonify({"error": "Only admins can auto-fix"}), 403
     
     project = Project.query.get_or_404(project_id)
     if not project.consent_granted:
@@ -167,3 +231,29 @@ def trigger_fix(project_id):
     
     return jsonify({"status": "Fix applied via PR!"})
 
+@dashboard_bp.route('/api/project/<project_id>/monitor/toggle', methods=['POST'])
+@login_required
+def toggle_monitoring(project_id):
+    """Toggles continuous background monitoring for any admin."""
+    project = Project.query.get_or_404(project_id)
+    is_owner = (current_user.role == 'admin' or project.client_id == current_user.id)
+    if not is_owner:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    # Premium plan required for continuous monitoring
+    client = User.query.get(project.client_id)
+    admin  = User.query.get(project.admin_id) if project.admin_id else None
+    has_premium = (client and client.plan == 'premium') or (admin and admin.plan == 'premium') or (current_user.plan == 'premium')
+    if not has_premium:
+        return jsonify({'error': 'Continuous monitoring requires a Premium plan.', 'upgrade': True}), 403
+
+    project.is_monitoring = not project.is_monitoring
+    db.session.commit()
+    
+    state = "enabled" if project.is_monitoring else "disabled"
+    log = Log(project_id=project.id, action_type='MONITOR_INFO', 
+              detail=f'📡 Continuous Monitor {state} by {current_user.username}.')
+    db.session.add(log)
+    db.session.commit()
+    
+    return jsonify({"status": state, "is_monitoring": project.is_monitoring})

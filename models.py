@@ -33,6 +33,7 @@ class Project(db.Model):
     target_url = db.Column(db.String(512), nullable=True)
     consent_granted = db.Column(db.Boolean, default=False)
     consent_token = db.Column(db.String(128), nullable=True)
+    is_monitoring = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     logs = db.relationship('Log', backref='project', lazy=True)

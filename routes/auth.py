@@ -28,14 +28,7 @@ def register():
         username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
-        role = request.form.get('role') # 'client' or 'admin'
-        plan = request.form.get('plan') # 'free' or 'premium'
-
-        # Default fallback
-        if not role:
-            role = 'client'
-        if not plan:
-            plan = 'free'
+        role = request.form.get('role', 'client')
 
         if User.query.filter_by(username=username).first():
             flash('Username already exists.')
@@ -45,17 +38,35 @@ def register():
             flash('Email address already registered.')
             return redirect(url_for('auth.register'))
         
-        user = User(username=username, email=email, role=role, plan=plan)
+        # New users start on free plan — they choose on the next screen
+        user = User(username=username, email=email, role=role, plan='free')
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
         
         login_user(user)
-        return redirect(url_for('dashboard.index'))
+        # Redirect to plan selection page for new users
+        return redirect(url_for('auth.choose_plan'))
     return render_template('register.html')
+
+
+@auth_bp.route('/choose-plan', methods=['GET', 'POST'])
+@login_required
+def choose_plan():
+    """Plan selection page shown after registration (or when upgrading)."""
+    if request.method == 'POST':
+        selected = request.form.get('plan', 'free')
+        if selected not in ('free', 'premium'):
+            selected = 'free'
+        current_user.plan = selected
+        db.session.commit()
+        return redirect(url_for('dashboard.index'))
+    return render_template('pricing.html')
+
 
 @auth_bp.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('auth.login'))
+
